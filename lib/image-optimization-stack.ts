@@ -74,6 +74,9 @@ export class ImageOptimizationStack extends Stack {
     } else {
       originalImageBucket = new s3.Bucket(this, 's3-sample-original-image-bucket', {
         removalPolicy: RemovalPolicy.DESTROY,
+        blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+        encryption: s3.BucketEncryption.S3_MANAGED,
+        enforceSSL: true,
         autoDeleteObjects: true, 
       });
       new s3deploy.BucketDeployment(this, 'DeployWebsite', {
@@ -83,6 +86,9 @@ export class ImageOptimizationStack extends Stack {
       });
       var sampleWebsiteBucket = new s3.Bucket(this, 's3-sample-website-bucket', {
         removalPolicy: RemovalPolicy.DESTROY,
+        blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+        encryption: s3.BucketEncryption.S3_MANAGED,
+        enforceSSL: true,
         autoDeleteObjects: true, 
       });
 
@@ -161,7 +167,6 @@ export class ImageOptimizationStack extends Stack {
     var imageOrigin;
 
     if (transformedImageBucket) {
-      console.log("transformedImageBucket");
       imageOrigin = new origins.OriginGroup ({
         primaryOrigin: new origins.S3Origin(transformedImageBucket, {
           originShieldRegion: CLOUDFRONT_ORIGIN_SHIELD_REGION,
