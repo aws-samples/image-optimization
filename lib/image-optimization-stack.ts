@@ -71,6 +71,10 @@ export class ImageOptimizationStack extends Stack {
 
     if (S3_IMAGE_BUCKET_NAME) {
       originalImageBucket = s3.Bucket.fromBucketName(this,'imported-original-image-bucket', S3_IMAGE_BUCKET_NAME);
+      new CfnOutput(this, 'OriginalImagesS3Bucket', {
+        description: 'S3 bucket where original images are stored',
+        value: originalImageBucket.bucketName
+      });  
     } else {
       originalImageBucket = new s3.Bucket(this, 's3-sample-original-image-bucket', {
         removalPolicy: RemovalPolicy.DESTROY,
@@ -104,8 +108,12 @@ export class ImageOptimizationStack extends Stack {
         description: 'Sample website domain',
         value: sampleWebsiteDelivery.distributionDomainName
       });
-      new CfnOutput(this, 'SampleWebsiteBucket', {
-        description: 'Sample website bucket',
+      new CfnOutput(this, 'SampleWebsiteS3Bucket', {
+        description: 'S3 bucket use by the sample website',
+        value: sampleWebsiteBucket.bucketName
+      });  
+      new CfnOutput(this, 'OriginalImagesS3Bucket', {
+        description: 'S3 bucket where original images are stored',
         value: sampleWebsiteBucket.bucketName
       });  
     }
