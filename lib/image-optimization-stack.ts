@@ -114,7 +114,7 @@ export class ImageOptimizationStack extends Stack {
       });  
       new CfnOutput(this, 'OriginalImagesS3Bucket', {
         description: 'S3 bucket where original images are stored',
-        value: sampleWebsiteBucket.bucketName
+        value: originalImageBucket.bucketName
       });  
     }
     
