@@ -8,7 +8,7 @@ function handler(event) {
     var normalizedOperations = {};
     if (request.querystring) {
         Object.keys(request.querystring).forEach(operation => {
-            switch (operation) {
+            switch (operation.toLowerCase()) {
                 case 'format': 
                     var SUPPORTED_FORMATS = ['auto', 'jpeg', 'webp', 'avif', 'png', 'svg', 'gif'];
                     if (request.querystring[operation]['value'] && SUPPORTED_FORMATS.includes(request.querystring[operation]['value'].toLowerCase())) {
