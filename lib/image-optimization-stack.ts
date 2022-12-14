@@ -248,6 +248,7 @@ export class ImageOptimizationStack extends Stack {
         customHeadersBehavior: {
           customHeaders: [
             { header: 'x-aws-image-optimization', value: 'v1.0', override: true },
+            { header: 'vary', value: 'accept', override: true },
           ],
         }
       });  
