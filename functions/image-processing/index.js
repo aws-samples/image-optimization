@@ -52,7 +52,7 @@ exports.handler = async (event) => {
         var resizingOptions = {};
         if (operationsJSON['width']) resizingOptions.width = parseInt(operationsJSON['width']);
         if (operationsJSON['height']) resizingOptions.height = parseInt(operationsJSON['height']);
-        if (resizingOptions) transformedImage = sharpObject.resize(resizingOptions).rotate();
+        if (resizingOptions) transformedImage = sharpObject.rotate().resize(resizingOptions);
         // check if formatting is requested
         if (operationsJSON['format']) {
             var isLossy = false;
