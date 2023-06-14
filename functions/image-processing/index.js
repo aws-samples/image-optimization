@@ -88,7 +88,7 @@ exports.handler = async (event) => {
                 Metadata: {
                     'cache-control': TRANSFORMED_IMAGE_CACHE_TTL,
                 },
-            }, function(err, data) {}).promise();
+            }).promise();
         } catch (error) {
             sendError('APPLICATION ERROR', 'Could not upload transformed image to S3', error);
         }
