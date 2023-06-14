@@ -1,11 +1,16 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT-0
 
-const AWS = require('aws-sdk');
-const https = require('https');
+// import { S3Client, GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3"; // ES Modules import
+const { S3Client, GetObjectCommand, PutObjectCommand } = require("@aws-sdk/client-s3"); // CommonJS import
 const Sharp = require('sharp');
 
-const S3 = new AWS.S3({signatureVersion: 'v4',httpOptions: {agent: new https.Agent({keepAlive: true})}}); 
+// By default, AWS SDK for JavaScript reuses TCP connections
+// https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/node-reusing-connections.html
+const s3Client = new S3Client({
+    region: process.env.AWS_REGION || process.env.CDK_DEFAULT_REGION || 'us-east-1',
+});
+// const S3 = new AWS.S3({signatureVersion: 'v4',httpOptions: {agent: new https.Agent({keepAlive: true})}}); 
 const S3_ORIGINAL_IMAGE_BUCKET = process.env.originalImageBucketName; 
 const S3_TRANSFORMED_IMAGE_BUCKET = process.env.transformedImageBucketName; 
 const TRANSFORMED_IMAGE_CACHE_TTL = process.env.transformedImageCacheTTL;
@@ -28,15 +33,33 @@ exports.handler = async (event) => {
     var timingLog = "perf ";
     var startTime = performance.now();
     // Downloading original image
-    let originalImage;
+    let originalImageBody;
     let contentType;
+    console.log('S3_ORIGINAL_IMAGE_BUCKET', S3_ORIGINAL_IMAGE_BUCKET);
+    console.log('originalImagePath', originalImagePath);
     try {
-        originalImage = await S3.getObject({ Bucket: S3_ORIGINAL_IMAGE_BUCKET, Key: originalImagePath }).promise();
-        contentType = originalImage.ContentType;
+        const streamToString = (stream) =>
+        new Promise((resolve, reject) => {
+          const chunks = [];
+          stream.on("data", (chunk) => chunks.push(chunk));
+          stream.on("error", reject);
+          stream.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+        });
+
+        const command = new GetObjectCommand({ Bucket: S3_ORIGINAL_IMAGE_BUCKET, Key: originalImagePath });
+
+        const { Body, ContentType } = await s3Client.send(command);
+        console.log('Body', Body);
+
+        originalImageBody = await streamToString(Body);
+        console.log('originalImageBody', originalImageBody);
+
+        contentType = ContentType;
+        console.log('contentType', contentType);
     } catch (error) {
         return sendError(500, 'error downloading original image', error);
     }
-    let sharpObject = Sharp(originalImage.Body);
+    let sharpObject = Sharp(originalImageBody);
     let transformedImage;
     //  execute the requested operations 
     var operationsJSON = {};
@@ -80,16 +103,16 @@ exports.handler = async (event) => {
     startTime = performance.now();
     // upload transformed image back to S3 if required in the architecture
     if (S3_TRANSFORMED_IMAGE_BUCKET) {
-        try { 
-            await S3.putObject({
+        try {
+            await s3Client.send(new PutObjectCommand({
                 Body: transformedImage, 
                 Bucket: S3_TRANSFORMED_IMAGE_BUCKET, 
                 Key:  originalImagePath + '/' + operationsPrefix, 
                 ContentType: contentType,
                 Metadata: {
                     'cache-control': TRANSFORMED_IMAGE_CACHE_TTL,
-                },
-            }, function(err, data) {}).promise();
+                }
+            }))
         } catch (error) {
             sendError('APPLICATION ERROR', 'Could not upload transformed image to S3', error);
         }
