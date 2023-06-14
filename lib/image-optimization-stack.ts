@@ -1,29 +1,29 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT-0
 
-import { Stack, StackProps, RemovalPolicy, aws_s3 as s3, aws_s3_deployment as s3deploy, aws_cloudfront as cloudfront, aws_cloudfront_origins as origins, aws_lambda as lambda, aws_iam as iam, Duration, CfnOutput, aws_logs as logs} from 'aws-cdk-lib';
+import { Stack, StackProps, RemovalPolicy, aws_s3 as s3, aws_s3_deployment as s3deploy, aws_cloudfront as cloudfront, aws_cloudfront_origins as origins, aws_lambda as lambda, aws_iam as iam, Duration, CfnOutput, aws_logs as logs } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { MyCustomResource } from './my-custom-resource';
 import { createHash } from 'crypto';
 
 // Region to Origin Shield mapping based on latency. to be updated when new Regional Edge Caches are added to CloudFront.
-const ORIGIN_SHIELD_MAPPING = new Map([['af-south-1', 'eu-west-2'], [ 'ap-east-1' ,'ap-northeast-2'], [ 'ap-northeast-1', 'ap-northeast-1'], [
-  'ap-northeast-2', 'ap-northeast-2'], [ 'ap-northeast-3', 'ap-northeast-1'], [ 'ap-south-1', 'ap-south-1'], [ 'ap-southeast-1','ap-southeast-1'], [ 
-  'ap-southeast-2', 'ap-southeast-2'], [ 'ca-central-1', 'us-east-1'], [ 'eu-central-1', 'eu-central-1'], [ 'eu-north-1','eu-central-1'], [
-  'eu-south-1','eu-central-1'], [ 'eu-west-1', 'eu-west-1'], [ 'eu-west-2', 'eu-west-2'], [ 'eu-west-3', 'eu-west-2'], [ 'me-south-1', 'ap-south-1'], [
-  'sa-east-1', 'sa-east-1'], [ 'us-east-1', 'us-east-1'], [ 'us-east-2','us-east-2'], [ 'us-west-1', 'us-west-1'], [ 'us-west-2', 'us-west-2']] );
+const ORIGIN_SHIELD_MAPPING = new Map([['af-south-1', 'eu-west-2'], ['ap-east-1', 'ap-northeast-2'], ['ap-northeast-1', 'ap-northeast-1'], [
+  'ap-northeast-2', 'ap-northeast-2'], ['ap-northeast-3', 'ap-northeast-1'], ['ap-south-1', 'ap-south-1'], ['ap-southeast-1', 'ap-southeast-1'], [
+  'ap-southeast-2', 'ap-southeast-2'], ['ca-central-1', 'us-east-1'], ['eu-central-1', 'eu-central-1'], ['eu-north-1', 'eu-central-1'], [
+  'eu-south-1', 'eu-central-1'], ['eu-west-1', 'eu-west-1'], ['eu-west-2', 'eu-west-2'], ['eu-west-3', 'eu-west-2'], ['me-south-1', 'ap-south-1'], [
+  'sa-east-1', 'sa-east-1'], ['us-east-1', 'us-east-1'], ['us-east-2', 'us-east-2'], ['us-west-1', 'us-west-1'], ['us-west-2', 'us-west-2']]);
 
 // Stack Parameters
 
 // related to architecture. If set to false, transformed images are not stored in S3, and all image requests land on Lambda
 var STORE_TRANSFORMED_IMAGES = 'true';
 // Parameters of S3 bucket where original images are stored
-var S3_IMAGE_BUCKET_NAME:string;
+var S3_IMAGE_BUCKET_NAME: string;
 // CloudFront parameters
-var CLOUDFRONT_ORIGIN_SHIELD_REGION = ORIGIN_SHIELD_MAPPING.get(process.env.AWS_REGION || process.env.CDK_DEFAULT_REGION || 'us-east-1');
+var CLOUDFRONT_ORIGIN_SHIELD_REGION = ORIGIN_SHIELD_MAPPING.get(process.env.AWS_REGION || process.env.CDK_DEFAULT_REGION || 'us-east-1');
 var CLOUDFRONT_CORS_ENABLED = 'true';
 // Parameters of transformed images
-var S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION = '90'; 
+var S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION = '90';
 var S3_TRANSFORMED_IMAGE_CACHE_TTL = 'max-age=31622400';
 // Lambda Parameters
 var LAMBDA_MEMORY = '1500';
@@ -35,12 +35,12 @@ type ImageDeliveryCacheBehaviorConfig = {
   viewerProtocolPolicy: any;
   cachePolicy: any;
   functionAssociations: any;
-  responseHeadersPolicy?:any;
+  responseHeadersPolicy?: any;
 };
 
 type LambdaEnv = {
   originalImageBucketName: string,
-  transformedImageBucketName?:any;
+  transformedImageBucketName?: any;
   transformedImageCacheTTL: string,
   secretKey: string,
   logTiming: string,
@@ -52,7 +52,7 @@ export class ImageOptimizationStack extends Stack {
 
     // Change stack parameters based on provided context
     STORE_TRANSFORMED_IMAGES = this.node.tryGetContext('STORE_TRANSFORMED_IMAGES') || STORE_TRANSFORMED_IMAGES;
-    S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION = this.node.tryGetContext('S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION') || S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION; 
+    S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION = this.node.tryGetContext('S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION') || S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION;
     S3_TRANSFORMED_IMAGE_CACHE_TTL = this.node.tryGetContext('S3_TRANSFORMED_IMAGE_CACHE_TTL') || S3_TRANSFORMED_IMAGE_CACHE_TTL;
     S3_IMAGE_BUCKET_NAME = this.node.tryGetContext('S3_IMAGE_BUCKET_NAME') || S3_IMAGE_BUCKET_NAME;
     CLOUDFRONT_ORIGIN_SHIELD_REGION = this.node.tryGetContext('CLOUDFRONT_ORIGIN_SHIELD_REGION') || CLOUDFRONT_ORIGIN_SHIELD_REGION;
@@ -62,7 +62,7 @@ export class ImageOptimizationStack extends Stack {
     LOG_TIMING = this.node.tryGetContext('LOG_TIMING') || LOG_TIMING;
 
     // Create secret key to be used between CloudFront and Lambda URL for access control
-    const SECRET_KEY = createHash('md5').update(this.node.addr).digest('hex') ;
+    const SECRET_KEY = createHash('md5').update(this.node.addr).digest('hex');
 
     // For the bucket having original images, either use an external one, or create one with some samples photos.
     var originalImageBucket;
@@ -70,18 +70,18 @@ export class ImageOptimizationStack extends Stack {
     var sampleWebsiteDelivery;
 
     if (S3_IMAGE_BUCKET_NAME) {
-      originalImageBucket = s3.Bucket.fromBucketName(this,'imported-original-image-bucket', S3_IMAGE_BUCKET_NAME);
+      originalImageBucket = s3.Bucket.fromBucketName(this, 'imported-original-image-bucket', S3_IMAGE_BUCKET_NAME);
       new CfnOutput(this, 'OriginalImagesS3Bucket', {
         description: 'S3 bucket where original images are stored',
         value: originalImageBucket.bucketName
-      });  
+      });
     } else {
       originalImageBucket = new s3.Bucket(this, 's3-sample-original-image-bucket', {
         removalPolicy: RemovalPolicy.DESTROY,
         blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
         encryption: s3.BucketEncryption.S3_MANAGED,
         enforceSSL: true,
-        autoDeleteObjects: true, 
+        autoDeleteObjects: true,
       });
       new s3deploy.BucketDeployment(this, 'DeployWebsite', {
         sources: [s3deploy.Source.asset('./image-sample')],
@@ -93,7 +93,7 @@ export class ImageOptimizationStack extends Stack {
         blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
         encryption: s3.BucketEncryption.S3_MANAGED,
         enforceSSL: true,
-        autoDeleteObjects: true, 
+        autoDeleteObjects: true,
       });
 
       sampleWebsiteDelivery = new cloudfront.Distribution(this, 'websiteDeliveryDistribution', {
@@ -111,23 +111,23 @@ export class ImageOptimizationStack extends Stack {
       new CfnOutput(this, 'SampleWebsiteS3Bucket', {
         description: 'S3 bucket use by the sample website',
         value: sampleWebsiteBucket.bucketName
-      });  
+      });
       new CfnOutput(this, 'OriginalImagesS3Bucket', {
         description: 'S3 bucket where original images are stored',
         value: originalImageBucket.bucketName
-      });  
+      });
     }
-    
+
     // create bucket for transformed images if enabled in the architecture
     if (STORE_TRANSFORMED_IMAGES === 'true') {
       transformedImageBucket = new s3.Bucket(this, 's3-transformed-image-bucket', {
         removalPolicy: RemovalPolicy.DESTROY,
-        autoDeleteObjects: true, 
+        autoDeleteObjects: true,
         lifecycleRules: [
-            {
-              expiration: Duration.days(parseInt(S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION)),
-            },
-          ],
+          {
+            expiration: Duration.days(parseInt(S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION)),
+          },
+        ],
       });
     }
 
@@ -143,7 +143,7 @@ export class ImageOptimizationStack extends Stack {
     // IAM policy to read from the S3 bucket containing the original images
     const s3ReadOriginalImagesPolicy = new iam.PolicyStatement({
       actions: ['s3:GetObject'],
-      resources: ['arn:aws:s3:::'+originalImageBucket.bucketName+'/*'],
+      resources: ['arn:aws:s3:::' + originalImageBucket.bucketName + '/*'],
     });
 
     // statements of the IAM policy to attach to Lambda
@@ -151,7 +151,7 @@ export class ImageOptimizationStack extends Stack {
 
     // Create Lambda for image processing
     var lambdaProps = {
-      runtime: lambda.Runtime.NODEJS_16_X, 
+      runtime: lambda.Runtime.NODEJS_16_X,
       handler: 'index.handler',
       code: lambda.Code.fromAsset('functions/image-processing'),
       timeout: Duration.seconds(parseInt(LAMBDA_TIMEOUT)),
@@ -175,7 +175,7 @@ export class ImageOptimizationStack extends Stack {
     var imageOrigin;
 
     if (transformedImageBucket) {
-      imageOrigin = new origins.OriginGroup ({
+      imageOrigin = new origins.OriginGroup({
         primaryOrigin: new origins.S3Origin(transformedImageBucket, {
           originShieldRegion: CLOUDFRONT_ORIGIN_SHIELD_REGION,
         }),
@@ -184,14 +184,14 @@ export class ImageOptimizationStack extends Stack {
           customHeaders: {
             'x-origin-secret-header': SECRET_KEY,
           },
-        }), 
+        }),
         fallbackStatusCodes: [403],
       });
 
       // write policy for Lambda on the s3 bucket for transformed images
       var s3WriteTransformedImagesPolicy = new iam.PolicyStatement({
         actions: ['s3:PutObject'],
-        resources: ['arn:aws:s3:::'+transformedImageBucket.bucketName+'/*'],
+        resources: ['arn:aws:s3:::' + transformedImageBucket.bucketName + '/*'],
       });
       iamPolicyStatements.push(s3WriteTransformedImagesPolicy);
     } else {
@@ -213,11 +213,11 @@ export class ImageOptimizationStack extends Stack {
 
     // Create a CloudFront Function for url rewrites
     const urlRewriteFunction = new cloudfront.Function(this, 'urlRewrite', {
-      code: cloudfront.FunctionCode.fromFile({filePath: 'functions/url-rewrite/index.js',}),
-      functionName: `urlRewriteFunction${this.node.addr}`, 
+      code: cloudfront.FunctionCode.fromFile({ filePath: 'functions/url-rewrite/index.js', }),
+      functionName: `urlRewriteFunction${this.node.addr}`,
     });
 
-    var imageDeliveryCacheBehaviorConfig:ImageDeliveryCacheBehaviorConfig  = {
+    var imageDeliveryCacheBehaviorConfig: ImageDeliveryCacheBehaviorConfig = {
       origin: imageOrigin,
       viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
       cachePolicy: new cloudfront.CachePolicy(this, `ImageCachePolicy${this.node.addr}`, {
@@ -251,7 +251,7 @@ export class ImageOptimizationStack extends Stack {
             { header: 'vary', value: 'accept', override: true },
           ],
         }
-      });  
+      });
       imageDeliveryCacheBehaviorConfig.responseHeadersPolicy = imageResponseHeadersPolicy;
     }
     const imageDelivery = new cloudfront.Distribution(this, 'imageDeliveryDistribution', {
