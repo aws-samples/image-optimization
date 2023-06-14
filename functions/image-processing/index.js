@@ -5,9 +5,9 @@ const AWS = require('aws-sdk');
 const https = require('https');
 const Sharp = require('sharp');
 
-const S3 = new AWS.S3({signatureVersion: 'v4',httpOptions: {agent: new https.Agent({keepAlive: true})}}); 
-const S3_ORIGINAL_IMAGE_BUCKET = process.env.originalImageBucketName; 
-const S3_TRANSFORMED_IMAGE_BUCKET = process.env.transformedImageBucketName; 
+const S3 = new AWS.S3({ signatureVersion: 'v4', httpOptions: { agent: new https.Agent({ keepAlive: true }) } });
+const S3_ORIGINAL_IMAGE_BUCKET = process.env.originalImageBucketName;
+const S3_TRANSFORMED_IMAGE_BUCKET = process.env.transformedImageBucketName;
 const TRANSFORMED_IMAGE_CACHE_TTL = process.env.transformedImageCacheTTL;
 const SECRET_KEY = process.env.secretKey;
 const LOG_TIMING = process.env.logTiming;
@@ -18,11 +18,11 @@ exports.handler = async (event) => {
     // Validate if this is a GET request
     if (!event.requestContext || !event.requestContext.http || !(event.requestContext.http.method === 'GET')) return sendError(400, 'Only GET method is supported', event);
     // An example of expected path is /rio/images/1.jpg/format=auto,width=100 or /rio/images/1.jpg/original where /rio/images/1.jpg is the path of the original image
-    var imagePathArray= event.requestContext.http.path.split('/');
+    var imagePathArray = event.requestContext.http.path.split('/');
     // get the requested image operations
-    var operationsPrefix = imagePathArray.pop(); 
+    var operationsPrefix = imagePathArray.pop();
     // get the original image path images/rio/1.jpg
-    imagePathArray.shift(); 
+    imagePathArray.shift();
     var originalImagePath = imagePathArray.join('/');
     // timing variable
     var timingLog = "perf ";
@@ -45,7 +45,7 @@ exports.handler = async (event) => {
         var operationKV = operation.split("=");
         operationsJSON[operationKV[0]] = operationKV[1];
     });
-    timingLog = timingLog + parseInt(performance.now()-startTime) + ' ';
+    timingLog = timingLog + parseInt(performance.now() - startTime) + ' ';
     startTime = performance.now();
     try {
         // check if resizing is requested
@@ -56,15 +56,14 @@ exports.handler = async (event) => {
         // check if formatting is requested
         if (operationsJSON['format']) {
             var isLossy = false;
-            switch (operationsJSON['format'])
-            {
-               case 'jpeg': contentType = 'image/jpeg'; isLossy = true; break;
-               case 'svg': contentType = 'image/svg+xml'; break;
-               case 'gif': contentType = 'image/gif'; break;
-               case 'webp': contentType = 'image/webp'; isLossy = true; break;
-               case 'png': contentType = 'image/png'; break;
-               case 'avif': contentType = 'image/avif'; isLossy = true; break;
-               default : contentType = 'image/jpeg'; isLossy = true;
+            switch (operationsJSON['format']) {
+                case 'jpeg': contentType = 'image/jpeg'; isLossy = true; break;
+                case 'svg': contentType = 'image/svg+xml'; break;
+                case 'gif': contentType = 'image/gif'; break;
+                case 'webp': contentType = 'image/webp'; isLossy = true; break;
+                case 'png': contentType = 'image/png'; break;
+                case 'avif': contentType = 'image/avif'; isLossy = true; break;
+                default: contentType = 'image/jpeg'; isLossy = true;
             }
             if (operationsJSON['quality'] && isLossy) {
                 transformedImage = transformedImage.toFormat(operationsJSON['format'], {
@@ -76,15 +75,15 @@ exports.handler = async (event) => {
     } catch (error) {
         return sendError(500, 'error transforming image', error);
     }
-    timingLog = timingLog + parseInt(performance.now()-startTime) + ' ';
+    timingLog = timingLog + parseInt(performance.now() - startTime) + ' ';
     startTime = performance.now();
     // upload transformed image back to S3 if required in the architecture
     if (S3_TRANSFORMED_IMAGE_BUCKET) {
-        try { 
+        try {
             await S3.putObject({
-                Body: transformedImage, 
-                Bucket: S3_TRANSFORMED_IMAGE_BUCKET, 
-                Key:  originalImagePath + '/' + operationsPrefix, 
+                Body: transformedImage,
+                Bucket: S3_TRANSFORMED_IMAGE_BUCKET,
+                Key: originalImagePath + '/' + operationsPrefix,
                 ContentType: contentType,
                 Metadata: {
                     'cache-control': TRANSFORMED_IMAGE_CACHE_TTL,
@@ -94,7 +93,7 @@ exports.handler = async (event) => {
             sendError('APPLICATION ERROR', 'Could not upload transformed image to S3', error);
         }
     }
-    timingLog = timingLog + parseInt(performance.now()-startTime) + ' ';
+    timingLog = timingLog + parseInt(performance.now() - startTime) + ' ';
     if (LOG_TIMING === 'true') console.log(timingLog);
     // return transformed image
     return {
@@ -102,13 +101,13 @@ exports.handler = async (event) => {
         body: transformedImage.toString('base64'),
         isBase64Encoded: true,
         headers: {
-            'Content-Type': contentType, 
-            'Cache-Control': TRANSFORMED_IMAGE_CACHE_TTL 
+            'Content-Type': contentType,
+            'Cache-Control': TRANSFORMED_IMAGE_CACHE_TTL
         }
     };
 };
 
-function sendError(code, message, error){
+function sendError(code, message, error) {
     console.log('APPLICATION ERROR', message);
     console.log(error);
     return {
