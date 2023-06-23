@@ -39,7 +39,6 @@ exports.handler = async (event) => {
     let transformedImage = Sharp(originalImage.Body);
     // Get image orientation to rotate if needed
     const imageMetadata = await transformedImage.metadata();
-    if (imageMetadata.orientation) transformedImage = Sharp(originalImage.Body).withMetadata({ orientation: imageMetadata.orientation });
     //  execute the requested operations 
     var operationsJSON = {};
     var operationsArray = operationsPrefix.split(',');
