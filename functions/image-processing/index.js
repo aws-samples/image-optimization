@@ -17,7 +17,7 @@ exports.handler = async (event) => {
     if (!event.headers['x-origin-secret-header'] || !(event.headers['x-origin-secret-header'] === SECRET_KEY)) return sendError(403, 'Request unauthorized', event);
     // Validate if this is a GET request
     if (!event.requestContext || !event.requestContext.http || !(event.requestContext.http.method === 'GET')) return sendError(400, 'Only GET method is supported', event);
-    // An example of expected path is /rio/images/1.jpg/format=auto,width=100 or /rio/images/1.jpg/original where /rio/images/1.jpg is the path of the original image
+    // An example of expected path is /images/rio/1.jpeg/format=auto,width=100 or /images/rio/1.jpeg/original where /images/rio/1.jpeg is the path of the original image
     var imagePathArray = event.requestContext.http.path.split('/');
     // get the requested image operations
     var operationsPrefix = imagePathArray.pop();
@@ -36,8 +36,10 @@ exports.handler = async (event) => {
     } catch (error) {
         return sendError(500, 'error downloading original image', error);
     }
-    let sharpObject = Sharp(originalImage.Body);
-    let transformedImage;
+    let transformedImage = Sharp(originalImage.Body);
+    // Get image orientation to rotate if needed
+    const imageMetadata = await transformedImage.metadata();
+    if (imageMetadata.orientation) transformedImage = Sharp(originalImage.Body).withMetadata({ orientation: imageMetadata.orientation });
     //  execute the requested operations 
     var operationsJSON = {};
     var operationsArray = operationsPrefix.split(',');
@@ -52,7 +54,9 @@ exports.handler = async (event) => {
         var resizingOptions = {};
         if (operationsJSON['width']) resizingOptions.width = parseInt(operationsJSON['width']);
         if (operationsJSON['height']) resizingOptions.height = parseInt(operationsJSON['height']);
-        if (resizingOptions) transformedImage = sharpObject.rotate().resize(resizingOptions);
+        if (resizingOptions) transformedImage = transformedImage.resize(resizingOptions);
+        // check if rotation is needed
+        if (imageMetadata.orientation) transformedImage = transformedImage.rotate();
         // check if formatting is requested
         if (operationsJSON['format']) {
             var isLossy = false;
