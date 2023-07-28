@@ -105,11 +105,8 @@ exports.handler = async (event) => {
     };
 };
 
-function sendError(code, message, error) {
-    console.log('APPLICATION ERROR', message);
+function sendError(statusCode, body, error) {
+    console.log('APPLICATION ERROR', body);
     console.log(error);
-    return {
-        statusCode: code,
-        body: message,
-    };
+    return { statusCode, body };
 }
