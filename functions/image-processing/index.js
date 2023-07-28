@@ -40,12 +40,7 @@ exports.handler = async (event) => {
     // Get image orientation to rotate if needed
     const imageMetadata = await transformedImage.metadata();
     //  execute the requested operations 
-    var operationsJSON = {};
-    var operationsArray = operationsPrefix.split(',');
-    operationsArray.forEach(operation => {
-        var operationKV = operation.split("=");
-        operationsJSON[operationKV[0]] = operationKV[1];
-    });
+    const operationsJSON = Object.fromEntries(operationsPrefix.split(',').map(operation => operation.split('=')));
     timingLog = timingLog + parseInt(performance.now() - startTime) + ' ';
     startTime = performance.now();
     try {
