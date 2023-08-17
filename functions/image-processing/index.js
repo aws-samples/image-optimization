@@ -50,6 +50,9 @@ exports.handler = async (event) => {
           const desiredWidth = parseInt(operationsJSON['width']);
           if (desiredWidth < imageMetadata.width) {
             resizingOptions.width = desiredWidth;
+            console.log('resize to', desiredWidth, 'from', imageMetadata.width);
+          } else {
+            console.log('no resize', desiredWidth, 'from', imageMetadata.width);
           }
         }
         if (operationsJSON['height']) {
