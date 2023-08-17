@@ -50,11 +50,9 @@ exports.handler = async (event) => {
           const desiredWidth = parseInt(operationsJSON['width']);
           if (desiredWidth < imageMetadata.width) {
             resizingOptions.width = desiredWidth;
-            console.log('resize to', desiredWidth, 'from', imageMetadata.width);
-          } else {
-            console.log('no resize', desiredWidth, 'from', imageMetadata.width);
           }
         }
+
         if (operationsJSON['height']) {
           const desiredHeight = parseInt(operationsJSON['height']);
           if (desiredWidth < imageMetadata.height) {
@@ -62,7 +60,10 @@ exports.handler = async (event) => {
           }
         }
 
-        if (resizingOptions) transformedImage = transformedImage.resize(resizingOptions);
+        if (Object.entries(resizingOptions).length > 0) {
+          transformedImage = transformedImage.resize(resizingOptions);
+        }
+
         // check if rotation is needed
         if (imageMetadata.orientation) transformedImage = transformedImage.rotate();
         // check if formatting is requested
