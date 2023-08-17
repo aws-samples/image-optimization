@@ -48,7 +48,6 @@ exports.handler = async (event) => {
         var resizingOptions = {};
         if (operationsJSON['width']) {
           const desiredWidth = parseInt(operationsJSON['width']);
-          console.log('resizing width to', desiredWidth, 'from', imageMetadata.width);
           if (desiredWidth < imageMetadata.width) {
             resizingOptions.width = desiredWidth;
           }
@@ -60,7 +59,6 @@ exports.handler = async (event) => {
           }
         }
 
-        resizingOptions.height = parseInt(operationsJSON['height']);
         if (resizingOptions) transformedImage = transformedImage.resize(resizingOptions);
         // check if rotation is needed
         if (imageMetadata.orientation) transformedImage = transformedImage.rotate();
