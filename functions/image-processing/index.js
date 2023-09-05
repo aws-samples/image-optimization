@@ -56,7 +56,6 @@ exports.handler = async (event) => {
             var isLossy = false;
             switch (operationsJSON['format']) {
                 case 'jpeg': contentType = 'image/jpeg'; isLossy = true; break;
-                case 'svg': contentType = 'image/svg+xml'; break;
                 case 'gif': contentType = 'image/gif'; break;
                 case 'webp': contentType = 'image/webp'; isLossy = true; break;
                 case 'png': contentType = 'image/png'; break;
