@@ -36,7 +36,7 @@ exports.handler = async (event) => {
     } catch (error) {
         return sendError(500, 'error downloading original image', error);
     }
-    let transformedImage = Sharp(originalImage.Body, { failOn: 'none' });
+    let transformedImage = Sharp(originalImage.Body, { failOn: 'none', animated: true });
     // Get image orientation to rotate if needed
     const imageMetadata = await transformedImage.metadata();
     //  execute the requested operations 
