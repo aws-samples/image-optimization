@@ -17,7 +17,7 @@ Note the following:
 * To prevent from unauthorized invocations of the Lambda function, CloudFront is configured to send a secret key in a Custom origin header, which is validated in the Lambda function before processing the image.
 
 ## Deploy the solution using CDK
-AWS CDK is an open-source software development framework used to define cloud infrastructure in code and provision it through AWS CloudFormation. Follow these steps in your command line to deploy the image optimization solution with CDK, using the region and account information configured in your AWS CLI.
+AWS CDK is an open-source software development framework used to define cloud infrastructure in code and provision it through AWS CloudFormation. Follow these steps in your command line to deploy the image optimization solution with CDK, using the region and account information configured in your AWS CLI. Note that you need to use a CLI on a x64 based processor (e.g. T2 EC2 instances).
 
 ```
 git clone https://github.com/aws-samples/image-optimization.git 
