@@ -82,6 +82,7 @@ exports.handler = async (event) => {
                 Bucket: S3_TRANSFORMED_IMAGE_BUCKET,
                 Key: originalImagePath + '/' + operationsPrefix,
                 ContentType: contentType,
+                StorageClass: "EXPRESS_ONEZONE",
                 Metadata: {
                     'cache-control': TRANSFORMED_IMAGE_CACHE_TTL,
                 },
