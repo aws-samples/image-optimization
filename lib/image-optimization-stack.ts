@@ -179,7 +179,7 @@ export class ImageOptimizationStack extends Stack {
             'x-origin-secret-header': SECRET_KEY,
           },
         }),
-        fallbackStatusCodes: [403],
+        fallbackStatusCodes: [403, 500, 503, 504],
       });
 
       // write policy for Lambda on the s3 bucket for transformed images
