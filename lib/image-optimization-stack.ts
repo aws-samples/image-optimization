@@ -1,9 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT-0
 
-import { Stack, StackProps, RemovalPolicy, aws_s3 as s3, aws_s3_deployment as s3deploy, aws_cloudfront as cloudfront, aws_cloudfront_origins as origins, aws_lambda as lambda, aws_iam as iam, Duration, CfnOutput, aws_logs as logs } from 'aws-cdk-lib';
+import { Fn, Stack, StackProps, RemovalPolicy, aws_s3 as s3, aws_s3_deployment as s3deploy, aws_cloudfront as cloudfront, aws_cloudfront_origins as origins, aws_lambda as lambda, aws_iam as iam, Duration, CfnOutput, aws_logs as logs } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { MyCustomResource } from './my-custom-resource';
 import { getOriginShieldRegion } from './origin-shield';
 import { createHash } from 'crypto';
 
@@ -160,10 +159,10 @@ export class ImageOptimizationStack extends Stack {
       authType: lambda.FunctionUrlAuthType.NONE,
     });
 
-    // Leverage a custom resource to get the hostname of the LambdaURL
-    const imageProcessingHelper = new MyCustomResource(this, 'customResource', {
-      Url: imageProcessingURL.url
-    });
+    // Leverage CDK Intrinsics to get the hostname of the URL as per the solution here: https://github.com/aws/aws-cdk/issues/20090.
+    // The original issue shows the following solution:  Fn.select(2, Fn.split("/", imageProcessingURL.url)).
+    // According to https://github.com/aws/aws-cdk/pull/10465 Fn.parseDomainName was merged to create a helper for this.
+    const imageProcessingDomainName = Fn.parseDomainName(imageProcessingURL.url);
 
     // Create a CloudFront origin: S3 with fallback to Lambda when image needs to be transformed, otherwise with Lambda as sole origin
     var imageOrigin;
@@ -173,7 +172,7 @@ export class ImageOptimizationStack extends Stack {
         primaryOrigin: new origins.S3Origin(transformedImageBucket, {
           originShieldRegion: CLOUDFRONT_ORIGIN_SHIELD_REGION,
         }),
-        fallbackOrigin: new origins.HttpOrigin(imageProcessingHelper.hostname, {
+        fallbackOrigin: new origins.HttpOrigin(imageProcessingDomainName, {
           originShieldRegion: CLOUDFRONT_ORIGIN_SHIELD_REGION,
           customHeaders: {
             'x-origin-secret-header': SECRET_KEY,
@@ -190,7 +189,7 @@ export class ImageOptimizationStack extends Stack {
       iamPolicyStatements.push(s3WriteTransformedImagesPolicy);
     } else {
       console.log("else transformedImageBucket");
-      imageOrigin = new origins.HttpOrigin(imageProcessingHelper.hostname, {
+      imageOrigin = new origins.HttpOrigin(imageProcessingDomainName, {
         originShieldRegion: CLOUDFRONT_ORIGIN_SHIELD_REGION,
         customHeaders: {
           'x-origin-secret-header': SECRET_KEY,
