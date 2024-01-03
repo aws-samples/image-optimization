@@ -159,9 +159,7 @@ export class ImageOptimizationStack extends Stack {
       authType: lambda.FunctionUrlAuthType.NONE,
     });
 
-    // Leverage CDK Intrinsics to get the hostname of the URL as per the solution here: https://github.com/aws/aws-cdk/issues/20090.
-    // The original issue shows the following solution:  Fn.select(2, Fn.split("/", imageProcessingURL.url)).
-    // According to https://github.com/aws/aws-cdk/pull/10465 Fn.parseDomainName was merged to create a helper for this.
+    // Leverage CDK Intrinsics to get the hostname of the Lambda URL 
     const imageProcessingDomainName = Fn.parseDomainName(imageProcessingURL.url);
 
     // Create a CloudFront origin: S3 with fallback to Lambda when image needs to be transformed, otherwise with Lambda as sole origin
