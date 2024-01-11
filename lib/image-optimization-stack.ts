@@ -18,10 +18,12 @@ var CLOUDFRONT_CORS_ENABLED = 'true';
 // Parameters of transformed images
 var S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION = '90';
 var S3_TRANSFORMED_IMAGE_CACHE_TTL = 'max-age=31622400';
+// Max image size in bytes. If generated images are stored on S3, bigger images are generated, stored on S3
+// and request is redirect to the generated image. Otherwise, an application error is sent.
+var MAX_IMAGE_SIZE = '4700000';
 // Lambda Parameters
 var LAMBDA_MEMORY = '1500';
 var LAMBDA_TIMEOUT = '60';
-var LOG_TIMING = 'false';
 
 type ImageDeliveryCacheBehaviorConfig = {
   origin: any;
@@ -36,7 +38,7 @@ type LambdaEnv = {
   transformedImageBucketName?: any;
   transformedImageCacheTTL: string,
   secretKey: string,
-  logTiming: string,
+  maxImageSize: string,
 }
 
 export class ImageOptimizationStack extends Stack {
@@ -52,7 +54,7 @@ export class ImageOptimizationStack extends Stack {
     CLOUDFRONT_CORS_ENABLED = this.node.tryGetContext('CLOUDFRONT_CORS_ENABLED') || CLOUDFRONT_CORS_ENABLED;
     LAMBDA_MEMORY = this.node.tryGetContext('LAMBDA_MEMORY') || LAMBDA_MEMORY;
     LAMBDA_TIMEOUT = this.node.tryGetContext('LAMBDA_TIMEOUT') || LAMBDA_TIMEOUT;
-    LOG_TIMING = this.node.tryGetContext('LOG_TIMING') || LOG_TIMING;
+    MAX_IMAGE_SIZE = this.node.tryGetContext('MAX_IMAGE_SIZE') || MAX_IMAGE_SIZE;
 
     // Create secret key to be used between CloudFront and Lambda URL for access control
     const SECRET_KEY = createHash('md5').update(this.node.addr).digest('hex');
@@ -129,7 +131,7 @@ export class ImageOptimizationStack extends Stack {
       originalImageBucketName: originalImageBucket.bucketName,
       transformedImageCacheTTL: S3_TRANSFORMED_IMAGE_CACHE_TTL,
       secretKey: SECRET_KEY,
-      logTiming: LOG_TIMING,
+      maxImageSize: MAX_IMAGE_SIZE,
     };
     if (transformedImageBucket) lambdaEnv.transformedImageBucketName = transformedImageBucket.bucketName;
 

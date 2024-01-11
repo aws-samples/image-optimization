@@ -10,7 +10,7 @@ const S3_ORIGINAL_IMAGE_BUCKET = process.env.originalImageBucketName;
 const S3_TRANSFORMED_IMAGE_BUCKET = process.env.transformedImageBucketName;
 const TRANSFORMED_IMAGE_CACHE_TTL = process.env.transformedImageCacheTTL;
 const SECRET_KEY = process.env.secretKey;
-const LOG_TIMING = process.env.logTiming;
+const MAX_IMAGE_SIZE = parseInt(process.env.maxImageSize);
 
 exports.handler = async (event) => {
     // First validate if the request is coming from CloudFront
@@ -24,8 +24,7 @@ exports.handler = async (event) => {
     // get the original image path images/rio/1.jpg
     imagePathArray.shift();
     var originalImagePath = imagePathArray.join('/');
-    // timing variable
-    var timingLog = "perf ";
+
     var startTime = performance.now();
     // Downloading original image
     let originalImage;
@@ -41,7 +40,8 @@ exports.handler = async (event) => {
     const imageMetadata = await transformedImage.metadata();
     //  execute the requested operations 
     const operationsJSON = Object.fromEntries(operationsPrefix.split(',').map(operation => operation.split('=')));
-    timingLog = timingLog + parseInt(performance.now() - startTime) + ' ';
+    // variable holding the server timing header value
+    var timingLog =  'img-download;dur=' + parseInt(performance.now() - startTime);
     startTime = performance.now();
     try {
         // check if resizing is requested
@@ -72,10 +72,14 @@ exports.handler = async (event) => {
     } catch (error) {
         return sendError(500, 'error transforming image', error);
     }
-    timingLog = timingLog + parseInt(performance.now() - startTime) + ' ';
-    startTime = performance.now();
+    timingLog = timingLog + ',img-transform;dur=' +parseInt(performance.now() - startTime);
+
+    // Graceful handleing of generated images bigger than a specified limit (e.g. Lambda output object limit)
+    const imageTooBig = Buffer.byteLength(transformedImage) > MAX_IMAGE_SIZE;
+
     // upload transformed image back to S3 if required in the architecture
     if (S3_TRANSFORMED_IMAGE_BUCKET) {
+        startTime = performance.now();
         try {
             await S3.putObject({
                 Body: transformedImage,
@@ -86,26 +90,45 @@ exports.handler = async (event) => {
                     'cache-control': TRANSFORMED_IMAGE_CACHE_TTL,
                 },
             }).promise();
+            timingLog = timingLog + ',img-upload;dur=' +parseInt(performance.now() - startTime);
+            // If the generated image file is too big, send a redirection to the generated image on S3, instead of serving it synchronously from Lambda. 
+            if (imageTooBig) {
+                return {
+                    statusCode: 302,
+                    headers: {
+                        'Location': '/' + originalImagePath + '?' + operationsPrefix.replace(/,/g, "&"),
+                        'Cache-Control' : 'private,no-store',
+                        'Server-Timing': timingLog
+                    }
+                };
+            }
         } catch (error) {
-            sendError('APPLICATION ERROR', 'Could not upload transformed image to S3', error);
+            logError('Could not upload transformed image to S3', error);
         }
+        
     }
-    timingLog = timingLog + parseInt(performance.now() - startTime) + ' ';
-    if (LOG_TIMING === 'true') console.log(timingLog);
-    // return transformed image
-    return {
+
+    // Return error if the image is too big and a redirection to the generated image was not possible, else return transformed image
+    if (imageTooBig) {
+        return sendError(403, 'Requested transformed image is too big', '');
+    } else return {
         statusCode: 200,
         body: transformedImage.toString('base64'),
         isBase64Encoded: true,
         headers: {
             'Content-Type': contentType,
-            'Cache-Control': TRANSFORMED_IMAGE_CACHE_TTL
+            'Cache-Control': TRANSFORMED_IMAGE_CACHE_TTL,
+            'Server-Timing': timingLog
         }
     };
 };
 
 function sendError(statusCode, body, error) {
+    logError(body, error);
+    return { statusCode, body };
+}
+
+function logError(body, error) {
     console.log('APPLICATION ERROR', body);
     console.log(error);
-    return { statusCode, body };
 }
