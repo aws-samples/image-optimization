@@ -62,7 +62,6 @@ export class ImageOptimizationStack extends Stack {
     // For the bucket having original images, either use an external one, or create one with some samples photos.
     var originalImageBucket;
     var transformedImageBucket;
-    var sampleWebsiteDelivery;
 
     if (S3_IMAGE_BUCKET_NAME) {
       originalImageBucket = s3.Bucket.fromBucketName(this, 'imported-original-image-bucket', S3_IMAGE_BUCKET_NAME);
@@ -82,30 +81,6 @@ export class ImageOptimizationStack extends Stack {
         sources: [s3deploy.Source.asset('./image-sample')],
         destinationBucket: originalImageBucket,
         destinationKeyPrefix: 'images/rio/',
-      });
-      var sampleWebsiteBucket = new s3.Bucket(this, 's3-sample-website-bucket', {
-        removalPolicy: RemovalPolicy.DESTROY,
-        blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-        encryption: s3.BucketEncryption.S3_MANAGED,
-        enforceSSL: true,
-        autoDeleteObjects: true,
-      });
-
-      sampleWebsiteDelivery = new cloudfront.Distribution(this, 'websiteDeliveryDistribution', {
-        comment: 'image optimization - sample website',
-        defaultRootObject: 'index.html',
-        defaultBehavior: {
-          origin: new origins.S3Origin(sampleWebsiteBucket),
-          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-        }
-      });
-      new CfnOutput(this, 'SampleWebsiteDomain', {
-        description: 'Sample website domain',
-        value: sampleWebsiteDelivery.distributionDomainName
-      });
-      new CfnOutput(this, 'SampleWebsiteS3Bucket', {
-        description: 'S3 bucket use by the sample website',
-        value: sampleWebsiteBucket.bucketName
       });
       new CfnOutput(this, 'OriginalImagesS3Bucket', {
         description: 'S3 bucket where original images are stored',
