@@ -59,11 +59,11 @@ cdk deploy -c S3_IMAGE_BUCKET_NAME='YOUR_S3_BUCKET_NAME'
 
 ## Additional configuration options
 
-In addition to `S3_IMAGE_BUCKET_NAME`, he solution supports customization through various parameters:
+In addition to `S3_IMAGE_BUCKET_NAME`, this solution supports customization through various CDK context / CLI parameters, such as:
 
-- S3_TRANSFORMED_IMAGE_CACHE_TTL: Configure the Cache-Control header for transformed images.
-- S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION: Set the duration for automatic removal of transformed images from S3.
-- STORE_TRANSFORMED_IMAGES: Choose whether to store transformed images in S3.
+- S3_TRANSFORMED_IMAGE_CACHE_TTL: configure the Cache-Control header for transformed images.
+- S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION: set the duration for automatic removal of transformed images from S3.
+- STORE_TRANSFORMED_IMAGES: choose whether to store transformed images in S3.
 
 For now, more parameters can be found in the stack's source code. In the future we will migrate default values of these parameters to a proper `cdk.json` configuration file.
 
