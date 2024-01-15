@@ -35,7 +35,7 @@ cdk deploy
 
 This solution is using [sharp](https://sharp.pixelplumbing.com/) to perform image optimizations in a performant manner. By default, it will use its latest available version. You can manually update share to the newest release if needed. For instance, if a critical vulnerability like the one addressed in [GitHub issue #3798](https://github.com/lovell/sharp/issues/3798) requires patching, you can simply run `npm run prepare-lambda` followed by `cdk deploy` to update and redeploy your application with the latest sharp version.
 
-## Deployment Output and Verification
+## Deployment output and Verification
 
 Upon successful deployment (within minutes), you'll receive the following information in the CDK output:
 
@@ -47,7 +47,7 @@ To verify functionality, test an optimized image using the following URL:
 https://YOURDISTRIBUTION.cloudfront.net/images/rio/1.jpeg?format=auto&width=300
 ```
 
-## Production Deployment Considerations
+## Production deployment considerations
 
 For production environments, it's highly recommended to use an existing S3 bucket storing your images. Follow these steps:
 
@@ -57,7 +57,7 @@ For production environments, it's highly recommended to use an existing S3 bucke
 cdk deploy -c S3_IMAGE_BUCKET_NAME='YOUR_S3_BUCKET_NAME'
 ```
 
-## Additional Configuration Options
+## Additional configuration options
 
 In addition to `S3_IMAGE_BUCKET_NAME`, he solution supports customization through various parameters:
 
