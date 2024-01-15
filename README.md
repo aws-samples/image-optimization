@@ -33,7 +33,7 @@ cdk bootstrap
 cdk deploy
 ```
 
-This solution is using [sharp](https://sharp.pixelplumbing.com/) to perform image optimizations in a performant manner. By default, it will use its latest available version. You can manually update share to the newest release if needed. For instance, if a critical vulnerability like the one addressed in [GitHub issue #3798](https://github.com/lovell/sharp/issues/3798) requires patching, you can simply run `npm run prepare-lambda` followed by `cdk deploy` to update and redeploy your application with the latest sharp version.
+This solution is using [sharp](https://sharp.pixelplumbing.com/) to perform image optimizations in a performant manner. By default, it will use its latest available version, but you also can manually force a reinstall of the latest sharp version if needed. For instance, if a critical vulnerability like the one addressed in [GitHub issue #3798](https://github.com/lovell/sharp/issues/3798) requires patching, you can simply run `npm run prepare-lambda` followed by `cdk deploy` to update and redeploy your application.
 
 ## Deployment output and Verification
 
