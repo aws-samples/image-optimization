@@ -153,7 +153,7 @@ export class ImageOptimizationStack extends Stack {
 
     // Create Lambda for image processing
     var lambdaProps = {
-      runtime: lambda.Runtime.NODEJS_16_X,
+      runtime: lambda.Runtime.NODEJS_20_X,
       handler: 'index.handler',
       code: lambda.Code.fromAsset('functions/image-processing'),
       timeout: Duration.seconds(parseInt(LAMBDA_TIMEOUT)),

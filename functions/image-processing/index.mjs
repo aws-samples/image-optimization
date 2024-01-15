@@ -1,18 +1,17 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT-0
 
-const AWS = require('aws-sdk');
-const https = require('https');
-const Sharp = require('sharp');
+import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import Sharp from 'sharp';
 
-const S3 = new AWS.S3({ signatureVersion: 'v4', httpOptions: { agent: new https.Agent({ keepAlive: true }) } });
+const s3Client = new S3Client();
 const S3_ORIGINAL_IMAGE_BUCKET = process.env.originalImageBucketName;
 const S3_TRANSFORMED_IMAGE_BUCKET = process.env.transformedImageBucketName;
 const TRANSFORMED_IMAGE_CACHE_TTL = process.env.transformedImageCacheTTL;
 const SECRET_KEY = process.env.secretKey;
 const MAX_IMAGE_SIZE = parseInt(process.env.maxImageSize);
 
-exports.handler = async (event) => {
+export const handler = async (event) => {
     // First validate if the request is coming from CloudFront
     if (!event.headers['x-origin-secret-header'] || !(event.headers['x-origin-secret-header'] === SECRET_KEY)) return sendError(403, 'Request unauthorized', event);
     // Validate if this is a GET request
@@ -27,15 +26,19 @@ exports.handler = async (event) => {
 
     var startTime = performance.now();
     // Downloading original image
-    let originalImage;
+    let originalImageBody;
     let contentType;
     try {
-        originalImage = await S3.getObject({ Bucket: S3_ORIGINAL_IMAGE_BUCKET, Key: originalImagePath }).promise();
-        contentType = originalImage.ContentType;
+        const getOriginalImageCommand = new GetObjectCommand({ Bucket: S3_ORIGINAL_IMAGE_BUCKET, Key: originalImagePath });
+        const getOriginalImageCommandOutput = await s3Client.send(getOriginalImageCommand);
+        console.log(`Got response from S3 for ${originalImagePath}`);
+
+        originalImageBody = getOriginalImageCommandOutput.Body.transformToByteArray();
+        contentType = getOriginalImageCommandOutput.ContentType;
     } catch (error) {
-        return sendError(500, 'error downloading original image', error);
+        return sendError(500, 'Error downloading original image', error);
     }
-    let transformedImage = Sharp(originalImage.Body, { failOn: 'none', animated: true });
+    let transformedImage = Sharp(await originalImageBody, { failOn: 'none', animated: true });
     // Get image orientation to rotate if needed
     const imageMetadata = await transformedImage.metadata();
     // execute the requested operations 
@@ -81,7 +84,7 @@ exports.handler = async (event) => {
     if (S3_TRANSFORMED_IMAGE_BUCKET) {
         startTime = performance.now();
         try {
-            await S3.putObject({
+            const putImageCommand = new PutObjectCommand({
                 Body: transformedImage,
                 Bucket: S3_TRANSFORMED_IMAGE_BUCKET,
                 Key: originalImagePath + '/' + operationsPrefix,
@@ -89,7 +92,8 @@ exports.handler = async (event) => {
                 Metadata: {
                     'cache-control': TRANSFORMED_IMAGE_CACHE_TTL,
                 },
-            }).promise();
+            })
+            await s3Client.send(putImageCommand);
             timingLog = timingLog + ',img-upload;dur=' + parseInt(performance.now() - startTime);
             // If the generated image file is too big, send a redirection to the generated image on S3, instead of serving it synchronously from Lambda. 
             if (imageTooBig) {
