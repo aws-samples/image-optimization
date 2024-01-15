@@ -38,7 +38,7 @@ exports.handler = async (event) => {
     let transformedImage = Sharp(originalImage.Body, { failOn: 'none', animated: true });
     // Get image orientation to rotate if needed
     const imageMetadata = await transformedImage.metadata();
-    //  execute the requested operations 
+    // execute the requested operations 
     const operationsJSON = Object.fromEntries(operationsPrefix.split(',').map(operation => operation.split('=')));
     // variable holding the server timing header value
     var timingLog = 'img-download;dur=' + parseInt(performance.now() - startTime);
@@ -74,7 +74,7 @@ exports.handler = async (event) => {
     }
     timingLog = timingLog + ',img-transform;dur=' + parseInt(performance.now() - startTime);
 
-    // Graceful handleing of generated images bigger than a specified limit (e.g. Lambda output object limit)
+    // handle gracefully generated images bigger than a specified limit (e.g. Lambda output object limit)
     const imageTooBig = Buffer.byteLength(transformedImage) > MAX_IMAGE_SIZE;
 
     // upload transformed image back to S3 if required in the architecture
