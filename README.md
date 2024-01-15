@@ -51,15 +51,15 @@ https://YOURDISTRIBUTION.cloudfront.net/images/rio/1.jpeg?format=auto&width=300
 
 For production environments, it's highly recommended to use an existing S3 bucket storing your images. Follow these steps:
 
-Deploy in the same region as your S3 bucket.
-Specify your bucket name during deployment:
+1. Deploy in the same region as your S3 bucket.
+2. Specify your bucket name during deployment:
 ```bash
 cdk deploy -c S3_IMAGE_BUCKET_NAME='YOUR_S3_BUCKET_NAME'
 ```
 
 ## Additional Configuration Options
 
-The solution supports customization through various parameters:
+In addition to `S3_IMAGE_BUCKET_NAME`, he solution supports customization through various parameters:
 
 - S3_TRANSFORMED_IMAGE_CACHE_TTL: Configure the Cache-Control header for transformed images.
 - S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION: Set the duration for automatic removal of transformed images from S3.
