@@ -26,14 +26,14 @@ cd image-optimization
 
 # install dependencies of this CDK project and the image-optimizing Lambda function
 npm install
+npm run prepare-lambda
 
 # prepare your AWS Account for CDK deployment and deploy the solution
 cdk bootstrap
-npm run build
 cdk deploy
 ```
 
-This solution is using [sharp](https://sharp.pixelplumbing.com/) to perform image optimizations in a performant manner. By default, it will use its latest available version. You can manually update share to the newest release if needed. For instance, if a critical vulnerability like the one addressed in [GitHub issue #3798](https://github.com/lovell/sharp/issues/3798) requires patching, you can simply run `npm run build` followed by `cdk deploy` to update and redeploy your application with the latest sharp version.
+This solution is using [sharp](https://sharp.pixelplumbing.com/) to perform image optimizations in a performant manner. By default, it will use its latest available version. You can manually update share to the newest release if needed. For instance, if a critical vulnerability like the one addressed in [GitHub issue #3798](https://github.com/lovell/sharp/issues/3798) requires patching, you can simply run `npm run prepare-lambda` followed by `cdk deploy` to update and redeploy your application with the latest sharp version.
 
 ## Deployment Output and Verification
 
