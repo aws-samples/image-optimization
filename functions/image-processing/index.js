@@ -41,7 +41,7 @@ exports.handler = async (event) => {
     //  execute the requested operations 
     const operationsJSON = Object.fromEntries(operationsPrefix.split(',').map(operation => operation.split('=')));
     // variable holding the server timing header value
-    var timingLog =  'img-download;dur=' + parseInt(performance.now() - startTime);
+    var timingLog = 'img-download;dur=' + parseInt(performance.now() - startTime);
     startTime = performance.now();
     try {
         // check if resizing is requested
@@ -72,7 +72,7 @@ exports.handler = async (event) => {
     } catch (error) {
         return sendError(500, 'error transforming image', error);
     }
-    timingLog = timingLog + ',img-transform;dur=' +parseInt(performance.now() - startTime);
+    timingLog = timingLog + ',img-transform;dur=' + parseInt(performance.now() - startTime);
 
     // Graceful handleing of generated images bigger than a specified limit (e.g. Lambda output object limit)
     const imageTooBig = Buffer.byteLength(transformedImage) > MAX_IMAGE_SIZE;
@@ -90,14 +90,14 @@ exports.handler = async (event) => {
                     'cache-control': TRANSFORMED_IMAGE_CACHE_TTL,
                 },
             }).promise();
-            timingLog = timingLog + ',img-upload;dur=' +parseInt(performance.now() - startTime);
+            timingLog = timingLog + ',img-upload;dur=' + parseInt(performance.now() - startTime);
             // If the generated image file is too big, send a redirection to the generated image on S3, instead of serving it synchronously from Lambda. 
             if (imageTooBig) {
                 return {
                     statusCode: 302,
                     headers: {
                         'Location': '/' + originalImagePath + '?' + operationsPrefix.replace(/,/g, "&"),
-                        'Cache-Control' : 'private,no-store',
+                        'Cache-Control': 'private,no-store',
                         'Server-Timing': timingLog
                     }
                 };
@@ -105,7 +105,6 @@ exports.handler = async (event) => {
         } catch (error) {
             logError('Could not upload transformed image to S3', error);
         }
-        
     }
 
     // Return error if the image is too big and a redirection to the generated image was not possible, else return transformed image
