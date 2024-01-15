@@ -19,20 +19,53 @@ Note the following:
 ## Deploy the solution using CDK
 AWS CDK is an open-source software development framework used to define cloud infrastructure in code and provision it through AWS CloudFormation. Follow these steps in your command line to deploy the image optimization solution with CDK, using the region and account information configured in your AWS CLI.
 
-```
+```bash
+# clone the repository
 git clone https://github.com/aws-samples/image-optimization.git 
 cd image-optimization
+
+# install dependencies of this CDK project and the image-optimizing Lambda function
 npm install
+
+# prepare your AWS Account for CDK deployment and deploy the solution
 cdk bootstrap
 npm run build
 cdk deploy
 ```
 
-Note that the solution deploys the latest version of the Sharp library. If a new version has been released, and you'd like to updgrade to the new version (for ex to patch a [cve](https://github.com/lovell/sharp/issues/3798)), rebuild and redeploy using CDK.
+This solution is using [sharp](https://sharp.pixelplumbing.com/) to perform image optimizations in a performant manner. By default, it will use its latest available version. You can manually update share to the newest release if needed. For instance, if a critical vulnerability like the one addressed in [GitHub issue #3798](https://github.com/lovell/sharp/issues/3798) requires patching, you can simply run `npm run build` followed by `cdk deploy` to update and redeploy your application with the latest sharp version.
 
-When the deployment is completed within minutes, the CDK output will include the domain name of the CloudFront distribution created for image optimization (ImageDeliveryDomain =YOURDISTRIBUTION.cloudfront.net). The stack will include an S3 bucket with sample images (OriginalImagesS3Bucket = YourS3BucketWithOriginalImagesGeneratedName). To verify that it is working properly, test the following optimized image URL https:// YOURDISTRIBUTION.cloudfront.net/images/rio/1.jpeg?format=auto&width=300.
+## Deployment Output and Verification
 
-Note that when deploying in production, it’s recommended to use an existing S3 bucket where your images are stored. To do that, deploy the stack in the same region of your S3 bucket, using the following parameter: cdk deploy -c S3_IMAGE_BUCKET_NAME=’YOUR_S3_BUCKET_NAME’. The solution allows you to configure other parameters such as whether you want to store transformed images in S3 (STORE_TRANSFORMED_IMAGES), the duration after which transformed images are automatically removed from S3 (S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION), and the Cache-Control header used with transformed images (S3_TRANSFORMED_IMAGE_CACHE_TTL).
+Upon successful deployment (within minutes), you'll receive the following information in the CDK output:
+
+- Image Delivery Domain: The CloudFront distribution domain for optimized images (e.g., `YOURDISTRIBUTION.cloudfront.net`)
+- Original Images S3 Bucket: The bucket containing sample images (e.g., `YourS3BucketWithOriginalImagesGeneratedName`)
+
+To verify functionality, test an optimized image using the following URL:
+```
+https://YOURDISTRIBUTION.cloudfront.net/images/rio/1.jpeg?format=auto&width=300
+```
+
+## Production Deployment Considerations
+
+For production environments, it's highly recommended to use an existing S3 bucket storing your images. Follow these steps:
+
+Deploy in the same region as your S3 bucket.
+Specify your bucket name during deployment:
+```bash
+cdk deploy -c S3_IMAGE_BUCKET_NAME='YOUR_S3_BUCKET_NAME'
+```
+
+## Additional Configuration Options
+
+The solution supports customization through various parameters:
+
+- S3_TRANSFORMED_IMAGE_CACHE_TTL: Configure the Cache-Control header for transformed images.
+- S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION: Set the duration for automatic removal of transformed images from S3.
+- STORE_TRANSFORMED_IMAGES: Choose whether to store transformed images in S3.
+
+For now, more parameters can be found in the stack's source code. In the future we will migrate default values of these parameters to a proper `cdk.json` configuration file.
 
 ## Clean up resources
 
@@ -45,4 +78,3 @@ cdk destroy
 ## License
 
 This library is licensed under the MIT-0 License. See the LICENSE file.
-
