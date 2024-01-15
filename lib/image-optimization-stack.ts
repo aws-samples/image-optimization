@@ -24,6 +24,8 @@ var MAX_IMAGE_SIZE = '4700000';
 // Lambda Parameters
 var LAMBDA_MEMORY = '1500';
 var LAMBDA_TIMEOUT = '60';
+// Whether to deploy a sample website referenced in https://aws.amazon.com/blogs/networking-and-content-delivery/image-optimization-using-amazon-cloudfront-and-aws-lambda/
+var DEPLOY_SAMPLE_WEBSITE = 'false';
 
 type ImageDeliveryCacheBehaviorConfig = {
   origin: any;
@@ -55,15 +57,44 @@ export class ImageOptimizationStack extends Stack {
     LAMBDA_MEMORY = this.node.tryGetContext('LAMBDA_MEMORY') || LAMBDA_MEMORY;
     LAMBDA_TIMEOUT = this.node.tryGetContext('LAMBDA_TIMEOUT') || LAMBDA_TIMEOUT;
     MAX_IMAGE_SIZE = this.node.tryGetContext('MAX_IMAGE_SIZE') || MAX_IMAGE_SIZE;
-
+    DEPLOY_SAMPLE_WEBSITE = this.node.tryGetContext('DEPLOY_SAMPLE_WEBSITE') || DEPLOY_SAMPLE_WEBSITE;
+    
     // Create secret key to be used between CloudFront and Lambda URL for access control
     const SECRET_KEY = createHash('md5').update(this.node.addr).digest('hex');
+
+    // deploy a sample website for testing if required
+    if (DEPLOY_SAMPLE_WEBSITE === 'true') {
+      var sampleWebsiteBucket = new s3.Bucket(this, 's3-sample-website-bucket', {
+        removalPolicy: RemovalPolicy.DESTROY,
+        blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+        encryption: s3.BucketEncryption.S3_MANAGED,
+        enforceSSL: true,
+        autoDeleteObjects: true,
+      });
+
+      var sampleWebsiteDelivery = new cloudfront.Distribution(this, 'websiteDeliveryDistribution', {
+        comment: 'image optimization - sample website',
+        defaultRootObject: 'index.html',
+        defaultBehavior: {
+          origin: new origins.S3Origin(sampleWebsiteBucket),
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        }
+      });
+
+      new CfnOutput(this, 'SampleWebsiteDomain', {
+        description: 'Sample website domain',
+        value: sampleWebsiteDelivery.distributionDomainName
+      });
+      new CfnOutput(this, 'SampleWebsiteS3Bucket', {
+        description: 'S3 bucket use by the sample website',
+        value: sampleWebsiteBucket.bucketName
+      });
+    }
 
     // For the bucket having original images, either use an external one, or create one with some samples photos.
     var originalImageBucket;
     var transformedImageBucket;
-    var sampleWebsiteDelivery;
-
+    
     if (S3_IMAGE_BUCKET_NAME) {
       originalImageBucket = s3.Bucket.fromBucketName(this, 'imported-original-image-bucket', S3_IMAGE_BUCKET_NAME);
       new CfnOutput(this, 'OriginalImagesS3Bucket', {
@@ -82,30 +113,6 @@ export class ImageOptimizationStack extends Stack {
         sources: [s3deploy.Source.asset('./image-sample')],
         destinationBucket: originalImageBucket,
         destinationKeyPrefix: 'images/rio/',
-      });
-      var sampleWebsiteBucket = new s3.Bucket(this, 's3-sample-website-bucket', {
-        removalPolicy: RemovalPolicy.DESTROY,
-        blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-        encryption: s3.BucketEncryption.S3_MANAGED,
-        enforceSSL: true,
-        autoDeleteObjects: true,
-      });
-
-      sampleWebsiteDelivery = new cloudfront.Distribution(this, 'websiteDeliveryDistribution', {
-        comment: 'image optimization - sample website',
-        defaultRootObject: 'index.html',
-        defaultBehavior: {
-          origin: new origins.S3Origin(sampleWebsiteBucket),
-          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-        }
-      });
-      new CfnOutput(this, 'SampleWebsiteDomain', {
-        description: 'Sample website domain',
-        value: sampleWebsiteDelivery.distributionDomainName
-      });
-      new CfnOutput(this, 'SampleWebsiteS3Bucket', {
-        description: 'S3 bucket use by the sample website',
-        value: sampleWebsiteBucket.bucketName
       });
       new CfnOutput(this, 'OriginalImagesS3Bucket', {
         description: 'S3 bucket where original images are stored',
