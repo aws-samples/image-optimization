@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT-0
 
 import { Fn, Stack, StackProps, RemovalPolicy, aws_s3 as s3, aws_s3_deployment as s3deploy, aws_cloudfront as cloudfront, aws_cloudfront_origins as origins, aws_lambda as lambda, aws_iam as iam, Duration, CfnOutput, aws_logs as logs } from 'aws-cdk-lib';
+import { CfnDistribution } from "aws-cdk-lib/aws-cloudfront";
 import { Construct } from 'constructs';
 import { getOriginShieldRegion } from './origin-shield';
 import { createHash } from 'crypto';
@@ -39,7 +40,6 @@ type LambdaEnv = {
   originalImageBucketName: string,
   transformedImageBucketName?: any;
   transformedImageCacheTTL: string,
-  secretKey: string,
   maxImageSize: string,
 }
 
@@ -59,8 +59,6 @@ export class ImageOptimizationStack extends Stack {
     MAX_IMAGE_SIZE = this.node.tryGetContext('MAX_IMAGE_SIZE') || MAX_IMAGE_SIZE;
     DEPLOY_SAMPLE_WEBSITE = this.node.tryGetContext('DEPLOY_SAMPLE_WEBSITE') || DEPLOY_SAMPLE_WEBSITE;
     
-    // Create secret key to be used between CloudFront and Lambda URL for access control
-    const SECRET_KEY = createHash('md5').update(this.node.addr).digest('hex');
 
     // deploy a sample website for testing if required
     if (DEPLOY_SAMPLE_WEBSITE === 'true') {
@@ -137,7 +135,6 @@ export class ImageOptimizationStack extends Stack {
     var lambdaEnv: LambdaEnv = {
       originalImageBucketName: originalImageBucket.bucketName,
       transformedImageCacheTTL: S3_TRANSFORMED_IMAGE_CACHE_TTL,
-      secretKey: SECRET_KEY,
       maxImageSize: MAX_IMAGE_SIZE,
     };
     if (transformedImageBucket) lambdaEnv.transformedImageBucketName = transformedImageBucket.bucketName;
@@ -164,9 +161,7 @@ export class ImageOptimizationStack extends Stack {
     var imageProcessing = new lambda.Function(this, 'image-optimization', lambdaProps);
 
     // Enable Lambda URL
-    const imageProcessingURL = imageProcessing.addFunctionUrl({
-      authType: lambda.FunctionUrlAuthType.NONE,
-    });
+    const imageProcessingURL = imageProcessing.addFunctionUrl();
 
     // Leverage CDK Intrinsics to get the hostname of the Lambda URL 
     const imageProcessingDomainName = Fn.parseDomainName(imageProcessingURL.url);
@@ -195,7 +190,6 @@ export class ImageOptimizationStack extends Stack {
       });
       iamPolicyStatements.push(s3WriteTransformedImagesPolicy);
     } else {
-      console.log("else transformedImageBucket");
       imageOrigin = new origins.HttpOrigin(imageProcessingDomainName, {
         originShieldRegion: CLOUDFRONT_ORIGIN_SHIELD_REGION,
         customHeaders: {
@@ -258,6 +252,24 @@ export class ImageOptimizationStack extends Stack {
       comment: 'image optimization - image delivery',
       defaultBehavior: imageDeliveryCacheBehaviorConfig
     });
+
+    // ADD OAC between CloudFront and LambdaURL
+    const oac = new cloudfront.CfnOriginAccessControl(this, "OAC", {
+      originAccessControlConfig: {
+        name: `oac${this.node.addr}`, 
+        originAccessControlOriginType: "lambda",
+        signingBehavior: "always",
+        signingProtocol: "sigv4",
+      },
+    });
+
+    cfnImageDelivery.addPropertyOverride(`DistributionConfig.Origins.${(STORE_TRANSFORMED_IMAGES === 'true')?"1":"0"}.OriginAccessControlId`, oac.getAtt("Id"));
+
+    imageProcessing.addPermission("AllowCloudFrontServicePrincipal", {
+      principal: new iam.ServicePrincipal("cloudfront.amazonaws.com"),
+      action: "lambda:InvokeFunctionUrl",
+      sourceArn: `arn:aws:cloudfront::${this.account}:distribution/${imageDelivery.distributionId}`
+    })
 
     new CfnOutput(this, 'ImageDeliveryDomain', {
       description: 'Domain name of image delivery',
