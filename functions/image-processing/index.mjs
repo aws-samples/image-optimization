@@ -8,12 +8,9 @@ const s3Client = new S3Client();
 const S3_ORIGINAL_IMAGE_BUCKET = process.env.originalImageBucketName;
 const S3_TRANSFORMED_IMAGE_BUCKET = process.env.transformedImageBucketName;
 const TRANSFORMED_IMAGE_CACHE_TTL = process.env.transformedImageCacheTTL;
-const SECRET_KEY = process.env.secretKey;
 const MAX_IMAGE_SIZE = parseInt(process.env.maxImageSize);
 
 export const handler = async (event) => {
-    // First validate if the request is coming from CloudFront
-    if (!event.headers['x-origin-secret-header'] || !(event.headers['x-origin-secret-header'] === SECRET_KEY)) return sendError(403, 'Request unauthorized', event);
     // Validate if this is a GET request
     if (!event.requestContext || !event.requestContext.http || !(event.requestContext.http.method === 'GET')) return sendError(400, 'Only GET method is supported', event);
     // An example of expected path is /images/rio/1.jpeg/format=auto,width=100 or /images/rio/1.jpeg/original where /images/rio/1.jpeg is the path of the original image
