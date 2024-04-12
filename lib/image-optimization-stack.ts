@@ -176,9 +176,6 @@ export class ImageOptimizationStack extends Stack {
         }),
         fallbackOrigin: new origins.HttpOrigin(imageProcessingDomainName, {
           originShieldRegion: CLOUDFRONT_ORIGIN_SHIELD_REGION,
-          customHeaders: {
-            'x-origin-secret-header': SECRET_KEY,
-          },
         }),
         fallbackStatusCodes: [403, 500, 503, 504],
       });
@@ -192,9 +189,6 @@ export class ImageOptimizationStack extends Stack {
     } else {
       imageOrigin = new origins.HttpOrigin(imageProcessingDomainName, {
         originShieldRegion: CLOUDFRONT_ORIGIN_SHIELD_REGION,
-        customHeaders: {
-          'x-origin-secret-header': SECRET_KEY,
-        },
       });
     }
 
@@ -263,6 +257,7 @@ export class ImageOptimizationStack extends Stack {
       },
     });
 
+    const cfnImageDelivery = imageDelivery.node.defaultChild as CfnDistribution;
     cfnImageDelivery.addPropertyOverride(`DistributionConfig.Origins.${(STORE_TRANSFORMED_IMAGES === 'true')?"1":"0"}.OriginAccessControlId`, oac.getAtt("Id"));
 
     imageProcessing.addPermission("AllowCloudFrontServicePrincipal", {
