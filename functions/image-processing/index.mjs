@@ -51,6 +51,7 @@ export const handler = async (event) => {
     try {
         // check if resizing is requested
         var resizingOptions = {};
+        console.log(`operationsJSON ${operationsJSON}`);
         if (operationsJSON['width']) resizingOptions.width = parseInt(operationsJSON['width']);
         if (operationsJSON['height']) resizingOptions.height = parseInt(operationsJSON['height']);
         if (resizingOptions) transformedImage = transformedImage.resize(resizingOptions);
@@ -73,6 +74,10 @@ export const handler = async (event) => {
                 });
             } else transformedImage = transformedImage.toFormat(operationsJSON['format']);
         }
+        transformedImage = transformedImage.png({
+            compressionLevel: 9, // Set compression level between 0 and 9
+            quality: 50 // Quality setting for PNG, between 0 and 100
+          });
         transformedImage = await transformedImage.toBuffer();
     } catch (error) {
         return sendError(500, 'error transforming image', error);
@@ -97,6 +102,10 @@ export const handler = async (event) => {
                     'cache-control': TRANSFORMED_IMAGE_CACHE_TTL,
                 },
             })
+
+            // Additional log for S3 bucket key & prefix
+            console.log(`originalImagePath & operationsPrefix === ${originalImagePath} === ${operationsPrefix} `);
+
             await s3Client.send(putImageCommand);
             timingLog = timingLog + ',img-upload;dur=' + parseInt(performance.now() - startTime);
             // If the generated image file is too big, send a redirection to the generated image on S3, instead of serving it synchronously from Lambda. 

@@ -122,15 +122,19 @@ export class ImageOptimizationStack extends Stack {
 
     // create bucket for transformed images if enabled in the architecture
     if (STORE_TRANSFORMED_IMAGES === 'true')  {
-      transformedImageBucket = new s3.Bucket(this, S3_IMAGE_DESTINATION_BUCKET_NAME || 's3-transformed-image-bucket', {
-        removalPolicy: RemovalPolicy.DESTROY,
-        autoDeleteObjects: true,
-        lifecycleRules: [
-          {
-            expiration: Duration.days(parseInt(S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION)),
-          },
-        ],
-      });
+      if (S3_IMAGE_DESTINATION_BUCKET_NAME){
+        transformedImageBucket = s3.Bucket.fromBucketName(this, 'imported-destination-image-bucket', S3_IMAGE_DESTINATION_BUCKET_NAME);
+      } else {
+        transformedImageBucket = new s3.Bucket(this, S3_IMAGE_DESTINATION_BUCKET_NAME || 's3-transformed-image-bucket', {
+          removalPolicy: RemovalPolicy.DESTROY,
+          autoDeleteObjects: true,
+          lifecycleRules: [
+            {
+              expiration: Duration.days(parseInt(S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION)),
+            },
+          ],
+        });
+      }
       console.log(`destination bucket ${(transformedImageBucket)}`);;
     }
 
