@@ -13,6 +13,7 @@ import { createHash } from 'crypto';
 var STORE_TRANSFORMED_IMAGES = 'true';
 // Parameters of S3 bucket where original images are stored
 var S3_IMAGE_BUCKET_NAME: string;
+var S3_IMAGE_DESTINATION_BUCKET_NAME: string;
 // CloudFront parameters
 var CLOUDFRONT_ORIGIN_SHIELD_REGION = getOriginShieldRegion(process.env.AWS_REGION || process.env.CDK_DEFAULT_REGION || 'us-east-1');
 var CLOUDFRONT_CORS_ENABLED = 'true';
@@ -52,6 +53,7 @@ export class ImageOptimizationStack extends Stack {
     S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION = this.node.tryGetContext('S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION') || S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION;
     S3_TRANSFORMED_IMAGE_CACHE_TTL = this.node.tryGetContext('S3_TRANSFORMED_IMAGE_CACHE_TTL') || S3_TRANSFORMED_IMAGE_CACHE_TTL;
     S3_IMAGE_BUCKET_NAME = this.node.tryGetContext('S3_IMAGE_BUCKET_NAME') || S3_IMAGE_BUCKET_NAME;
+    S3_IMAGE_DESTINATION_BUCKET_NAME = this.node.tryGetContext('S3_IMAGE_DESTINATION_BUCKET_NAME') || S3_IMAGE_DESTINATION_BUCKET_NAME;
     CLOUDFRONT_ORIGIN_SHIELD_REGION = this.node.tryGetContext('CLOUDFRONT_ORIGIN_SHIELD_REGION') || CLOUDFRONT_ORIGIN_SHIELD_REGION;
     CLOUDFRONT_CORS_ENABLED = this.node.tryGetContext('CLOUDFRONT_CORS_ENABLED') || CLOUDFRONT_CORS_ENABLED;
     LAMBDA_MEMORY = this.node.tryGetContext('LAMBDA_MEMORY') || LAMBDA_MEMORY;
@@ -119,8 +121,8 @@ export class ImageOptimizationStack extends Stack {
     }
 
     // create bucket for transformed images if enabled in the architecture
-    if (STORE_TRANSFORMED_IMAGES === 'true') {
-      transformedImageBucket = new s3.Bucket(this, 's3-transformed-image-bucket', {
+    if (STORE_TRANSFORMED_IMAGES === 'true')  {
+      transformedImageBucket = new s3.Bucket(this, S3_IMAGE_DESTINATION_BUCKET_NAME || 's3-transformed-image-bucket', {
         removalPolicy: RemovalPolicy.DESTROY,
         autoDeleteObjects: true,
         lifecycleRules: [
@@ -129,6 +131,7 @@ export class ImageOptimizationStack extends Stack {
           },
         ],
       });
+      console.log(`destination bucket ${(transformedImageBucket)}`);;
     }
 
     // prepare env variable for Lambda 

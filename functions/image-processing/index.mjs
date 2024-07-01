@@ -33,8 +33,11 @@ export const handler = async (event) => {
         originalImageBody = getOriginalImageCommandOutput.Body.transformToByteArray();
         contentType = getOriginalImageCommandOutput.ContentType;
     } catch (error) {
+        console.log(`S3 bucket referred ${S3_ORIGINAL_IMAGE_BUCKET}`);
+        logError('Error downloading original image', error);
         return sendError(500, 'Error downloading original image', error);
     }
+    console.log(`S3 bucket referred 1`);
     let transformedImage = Sharp(await originalImageBody, { failOn: 'none', animated: true });
     // Get image orientation to rotate if needed
     const imageMetadata = await transformedImage.metadata();
@@ -42,7 +45,9 @@ export const handler = async (event) => {
     const operationsJSON = Object.fromEntries(operationsPrefix.split(',').map(operation => operation.split('=')));
     // variable holding the server timing header value
     var timingLog = 'img-download;dur=' + parseInt(performance.now() - startTime);
+    console.log(`S3 bucket referred ${S3_ORIGINAL_IMAGE_BUCKET}`);
     startTime = performance.now();
+    console.log(`S3 bucket referred 2`);
     try {
         // check if resizing is requested
         var resizingOptions = {};
@@ -67,9 +72,6 @@ export const handler = async (event) => {
                     quality: parseInt(operationsJSON['quality']),
                 });
             } else transformedImage = transformedImage.toFormat(operationsJSON['format']);
-        } else {
-            /// If not format is precised, Sharp converts svg to png by default https://github.com/aws-samples/image-optimization/issues/48
-            if (contentType === 'image/svg+xml') contentType = 'image/png';
         }
         transformedImage = await transformedImage.toBuffer();
     } catch (error) {
@@ -80,6 +82,8 @@ export const handler = async (event) => {
     // handle gracefully generated images bigger than a specified limit (e.g. Lambda output object limit)
     const imageTooBig = Buffer.byteLength(transformedImage) > MAX_IMAGE_SIZE;
 
+    console.log(`S3 transformed image bucket ${S3_TRANSFORMED_IMAGE_BUCKET}`);
+    
     // upload transformed image back to S3 if required in the architecture
     if (S3_TRANSFORMED_IMAGE_BUCKET) {
         startTime = performance.now();
