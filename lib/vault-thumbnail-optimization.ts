@@ -14,18 +14,19 @@ var STORE_TRANSFORMED_IMAGES = 'true';
 // Parameters of S3 bucket where original images are stored
 var S3_IMAGE_BUCKET_NAME: string;
 var S3_IMAGE_DESTINATION_BUCKET_NAME: string;
+var LAMBDA_NAME: string;
 // CloudFront parameters
 var CLOUDFRONT_ORIGIN_SHIELD_REGION = getOriginShieldRegion(process.env.AWS_REGION || process.env.CDK_DEFAULT_REGION || 'us-east-1');
 var CLOUDFRONT_CORS_ENABLED = 'true';
 // Parameters of transformed images
-var S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION = '90';
+var S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION = '365';
 var S3_TRANSFORMED_IMAGE_CACHE_TTL = 'max-age=31622400';
 // Max image size in bytes. If generated images are stored on S3, bigger images are generated, stored on S3
 // and request is redirect to the generated image. Otherwise, an application error is sent.
 var MAX_IMAGE_SIZE = '4700000';
 // Lambda Parameters
 var LAMBDA_MEMORY = '1500';
-var LAMBDA_TIMEOUT = '60';
+var LAMBDA_TIMEOUT = '30';
 // Whether to deploy a sample website referenced in https://aws.amazon.com/blogs/networking-and-content-delivery/image-optimization-using-amazon-cloudfront-and-aws-lambda/
 var DEPLOY_SAMPLE_WEBSITE = 'false';
 
@@ -157,6 +158,7 @@ export class ImageOptimizationStack extends Stack {
 
     // Create Lambda for image processing
     var lambdaProps = {
+      functionName: 'vault-thumbnail-optimization',
       runtime: lambda.Runtime.NODEJS_20_X,
       handler: 'index.handler',
       code: lambda.Code.fromAsset('functions/image-processing'),
@@ -165,7 +167,7 @@ export class ImageOptimizationStack extends Stack {
       environment: lambdaEnv,
       logRetention: logs.RetentionDays.ONE_DAY,
     };
-    var imageProcessing = new lambda.Function(this, 'image-optimization', lambdaProps);
+    var imageProcessing = new lambda.Function(this, 'vault-thumbnail-optimization', lambdaProps);
 
     // Enable Lambda URL
     const imageProcessingURL = imageProcessing.addFunctionUrl();
@@ -207,7 +209,7 @@ export class ImageOptimizationStack extends Stack {
     );
 
     // Create a CloudFront Function for url rewrites
-    const urlRewriteFunction = new cloudfront.Function(this, 'urlRewrite', {
+    const urlRewriteFunction = new cloudfront.Function(this, 'vault-thumbnail-urlRewrite', {
       code: cloudfront.FunctionCode.fromFile({ filePath: 'functions/url-rewrite/index.js', }),
       functionName: `urlRewriteFunction${this.node.addr}`,
     });
@@ -242,7 +244,7 @@ export class ImageOptimizationStack extends Stack {
         // recognizing image requests that were processed by this solution
         customHeadersBehavior: {
           customHeaders: [
-            { header: 'x-aws-image-optimization', value: 'v1.0', override: true },
+            { header: 'x-aws-vault-thumbnail-optimization', value: 'v1.0', override: true },
             { header: 'vary', value: 'accept', override: true },
           ],
         }

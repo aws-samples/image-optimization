@@ -1,8 +1,8 @@
 {
-  "name": "image-optimization",
+  "name": "vault-thumbnail-optimization",
   "version": "0.1.0",
   "bin": {
-    "image-optimization": "bin/image-optimization.js"
+    "vault-thumbnail-optimization": "bin/vault-thumbnail-optimization.js"
   },
   "scripts": {
     "prebuild": "npm install sharp --prefix functions/image-processing/ --os=linux --cpu=x64",
