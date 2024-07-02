@@ -6,6 +6,8 @@ import { CfnDistribution } from "aws-cdk-lib/aws-cloudfront";
 import { Construct } from 'constructs';
 import { getOriginShieldRegion } from './origin-shield';
 import { createHash } from 'crypto';
+import { ComputeEnvironmentBase } from 'aws-cdk-lib/aws-batch';
+import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 
 // Stack Parameters
 
@@ -75,7 +77,7 @@ export class ImageOptimizationStack extends Stack {
 
       var sampleWebsiteDelivery = new cloudfront.Distribution(this, 'websiteDeliveryDistribution', {
         comment: 'image optimization - sample website',
-        defaultRootObject: 'index.html',
+        defaultRootObject: 'index.html',       
         defaultBehavior: {
           origin: new origins.S3Origin(sampleWebsiteBucket),
           viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
@@ -167,6 +169,10 @@ export class ImageOptimizationStack extends Stack {
       environment: lambdaEnv,
       logRetention: logs.RetentionDays.ONE_DAY,
     };
+
+
+   
+
     var imageProcessing = new lambda.Function(this, 'vault-thumbnail-optimization', lambdaProps);
 
     // Enable Lambda URL
@@ -251,10 +257,20 @@ export class ImageOptimizationStack extends Stack {
       });
       imageDeliveryCacheBehaviorConfig.responseHeadersPolicy = imageResponseHeadersPolicy;
     }
-    const imageDelivery = new cloudfront.Distribution(this, 'imageDeliveryDistribution', {
+
+
+
+    const certificateArn = "arn:aws:acm:us-east-1:607765814920:certificate/d6d898ec-b894-45e5-aaed-0da780ac3ebe";
+    const certificate = acm.Certificate.fromCertificateArn(this, 'CertificateImported', certificateArn);
+     
+    var distributionprops = {
+      domainNames: ['vault-cdn-opt.dev.eka.care'],
       comment: 'image optimization - image delivery',
-      defaultBehavior: imageDeliveryCacheBehaviorConfig
-    });
+      defaultBehavior: imageDeliveryCacheBehaviorConfig,
+      certificate: certificate,
+    };
+
+    const imageDelivery = new cloudfront.Distribution(this, 'vault-thumbnail', distributionprops);
 
     // ADD OAC between CloudFront and LambdaURL
     const oac = new cloudfront.CfnOriginAccessControl(this, "OAC", {
