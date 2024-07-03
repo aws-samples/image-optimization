@@ -38,6 +38,7 @@ type ImageDeliveryCacheBehaviorConfig = {
   cachePolicy: any;
   functionAssociations: any;
   responseHeadersPolicy?: any;
+  trustedKeyGroups: any;
 };
 
 type LambdaEnv = {
@@ -168,10 +169,7 @@ export class ImageOptimizationStack extends Stack {
       memorySize: parseInt(LAMBDA_MEMORY),
       environment: lambdaEnv,
       logRetention: logs.RetentionDays.ONE_DAY,
-    };
-
-
-   
+    };  
 
     var imageProcessing = new lambda.Function(this, 'vault-thumbnail-optimization', lambdaProps);
 
@@ -219,10 +217,16 @@ export class ImageOptimizationStack extends Stack {
       code: cloudfront.FunctionCode.fromFile({ filePath: 'functions/url-rewrite/index.js', }),
       functionName: `urlRewriteFunction${this.node.addr}`,
     });
+   
+
+    const keyGroup = cloudfront.KeyGroup.fromKeyGroupId(this, 'KeyImported', '79684031-7027-4847-8385-e945b18215ea');
 
     var imageDeliveryCacheBehaviorConfig: ImageDeliveryCacheBehaviorConfig = {
       origin: imageOrigin,
       viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+      trustedKeyGroups: [
+        keyGroup,
+      ],
       cachePolicy: new cloudfront.CachePolicy(this, `ImageCachePolicy${this.node.addr}`, {
         defaultTtl: Duration.hours(24),
         maxTtl: Duration.days(365),
@@ -262,10 +266,12 @@ export class ImageOptimizationStack extends Stack {
 
     const certificateArn = "arn:aws:acm:us-east-1:607765814920:certificate/d6d898ec-b894-45e5-aaed-0da780ac3ebe";
     const certificate = acm.Certificate.fromCertificateArn(this, 'CertificateImported', certificateArn);
+
+
      
     var distributionprops = {
       domainNames: ['vault-cdn-opt.dev.eka.care'],
-      comment: 'image optimization - image delivery',
+      comment: 'vault thumbnail optimization',
       defaultBehavior: imageDeliveryCacheBehaviorConfig,
       certificate: certificate,
     };
@@ -291,9 +297,10 @@ export class ImageOptimizationStack extends Stack {
       sourceArn: `arn:aws:cloudfront::${this.account}:distribution/${imageDelivery.distributionId}`
     })
 
-    new CfnOutput(this, 'ImageDeliveryDomain', {
-      description: 'Domain name of image delivery',
+    new CfnOutput(this, 'vault-thumbnail-url', {
+      description: 'Domain name of vault-thumbnail optimization',
       value: imageDelivery.distributionDomainName
     });
+
   }
 }

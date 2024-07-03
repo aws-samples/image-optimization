@@ -5,7 +5,7 @@ import { ImageOptimizationStack } from '../lib/vault-thumbnail-optimization';
 
 
 const app = new cdk.App();
-new ImageOptimizationStack(app, 'ImgTransformationStack', {
+new ImageOptimizationStack(app, 'vault-thumbnail-optimization', {
 
 });
 
