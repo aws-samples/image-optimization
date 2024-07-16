@@ -67,6 +67,9 @@ export const handler = async (event) => {
                     quality: parseInt(operationsJSON['quality']),
                 });
             } else transformedImage = transformedImage.toFormat(operationsJSON['format']);
+        } else {
+            /// If not format is precised, Sharp converts svg to png by default https://github.com/aws-samples/image-optimization/issues/48
+            if (contentType === 'image/svg+xml') contentType = 'image/png';
         }
         transformedImage = await transformedImage.toBuffer();
     } catch (error) {
