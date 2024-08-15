@@ -5,7 +5,7 @@
     "image-optimization": "bin/image-optimization.js"
   },
   "scripts": {
-    "prebuild": "npm install sharp --prefix functions/image-processing/ --os=linux --cpu=x64",
+    "prebuild": "npm install sharp @img/sharp-libvips-linux-x64 @img/sharp-linux-x64 --prefix functions/image-processing --force --omit=optional",
     "build": "tsc",
     "watch": "tsc -w",
     "test": "jest",
