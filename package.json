@@ -1,9 +1,6 @@
 {
   "name": "image-optimization",
   "version": "0.1.0",
-  "bin": {
-    "image-optimization": "bin/image-optimization.js"
-  },
   "scripts": {
     "prebuild": "npm install sharp @img/sharp-libvips-linux-x64 @img/sharp-linux-x64 --prefix functions/image-processing --force --omit=optional",
     "build": "tsc",
@@ -22,7 +19,6 @@
     "typescript": "~5.3.3"
   },
   "dependencies": {
-    "aws-cdk-lib": "2.121.1",
     "constructs": "^10.3.0",
     "source-map-support": "^0.5.21"
   }

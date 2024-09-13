@@ -1,5 +1,5 @@
 {
-  "app": "npx ts-node --prefer-ts-exts bin/image-optimization.ts",
+  "app": "npx ts-node --prefer-ts-exts infrastructure/stack.ts",
   "watch": {
     "include": [
       "**"
