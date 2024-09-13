@@ -9,4 +9,5 @@ node_modules
 cdk.out
 .DS_Store
 
+functions/image-processing/package*.json
 package-lock.json
