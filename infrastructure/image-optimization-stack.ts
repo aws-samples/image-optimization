@@ -4,7 +4,6 @@
 import { Fn, Stack, StackProps, RemovalPolicy, aws_s3 as s3, aws_s3_deployment as s3deploy, aws_cloudfront as cloudfront, aws_cloudfront_origins as origins, aws_lambda as lambda, aws_iam as iam, Duration, CfnOutput, aws_logs as logs } from 'aws-cdk-lib';
 import { CfnDistribution } from "aws-cdk-lib/aws-cloudfront";
 import { Construct } from 'constructs';
-import { getOriginShieldRegion } from './origin-shield';
 
 // Stack Parameters
 
@@ -13,7 +12,7 @@ var STORE_TRANSFORMED_IMAGES = 'true';
 // Parameters of S3 bucket where original images are stored
 var S3_IMAGE_BUCKET_NAME: string;
 // CloudFront parameters
-var CLOUDFRONT_ORIGIN_SHIELD_REGION = getOriginShieldRegion(process.env.AWS_REGION || process.env.CDK_DEFAULT_REGION || 'us-east-1');
+var CLOUDFRONT_ORIGIN_SHIELD_REGION = 'us-east-1';
 var CLOUDFRONT_CORS_ENABLED = 'true';
 // Parameters of transformed images
 var S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION = '90';
