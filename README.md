@@ -42,8 +42,6 @@ The stack can be deployed with the following parameters.
 * **LAMBDA_MEMORY** Speficy this parameter to tune the memory in MB of the Lambda function that processes images, with the goal of improving processing performance. Usage: cdk deploy -c LAMBDA_MEMORY=2000. Default value is 1500 MB.
 * **LAMBDA_TIMEOUT** Speficy this parameter to tune the timeout in seconds of the Lambda function that processes images. Usage: cdk deploy -c LAMBDA_TIMEOUT=10. Default value is 60 seconds.
 * **MAX_IMAGE_SIZE** Speficy this parameter to set a maximum request image size in bytes. If STORE_TRANSFORMED_IMAGES=false, requests resulting in images bigger than MAX_IMAGE_SIZE fail to 5xx error. Otherwise, Lambda transforms the image, uploads it to S3, then sends a redirect to the same image location on S3 to avoid hitting the Lambda output size limit. Usage: cdk deploy -c MAX_IMAGE_SIZE=200000. Default value is 4700000 bytes.
-* **DEPLOY_SAMPLE_WEBSITE** set this paramter to true if you want the stack to include another CloudFront distribution pointing to an S3 bucket, that you can use for static website hosting. This option is used in the initial solution [post](https://aws.amazon.com/blogs/networking-and-content-delivery/image-optimization-using-amazon-cloudfront-and-aws-lambda/)
-
 
 ## Clean up resources
 
