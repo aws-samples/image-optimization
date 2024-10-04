@@ -124,7 +124,7 @@ export class ImageOptimizationStack extends Stack {
     const imageProcessingLambdaPolicyStatements = [
       new iam.PolicyStatement({
         actions: ['s3:GetObject'],
-        resources: ['arn:aws:s3:::' + originalImageBucket.bucketName + '/*']
+        resources: [`arn:aws:s3:::${originalImageBucket.bucketName}/*`]
       })
     ];
 
@@ -159,7 +159,7 @@ export class ImageOptimizationStack extends Stack {
       imageProcessingLambdaPolicyStatements.push(
         new iam.PolicyStatement({
           actions: ['s3:PutObject'],
-          resources: ['arn:aws:s3:::' + transformedImageBucket.bucketName + '/*'],
+          resources: [`arn:aws:s3:::${transformedImageBucket.bucketName}/*`],
         })
       );
     } else {
