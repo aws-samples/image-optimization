@@ -5,7 +5,6 @@ import { Fn, Stack, StackProps, RemovalPolicy, aws_s3 as s3, aws_s3_deployment a
 import { CfnDistribution } from "aws-cdk-lib/aws-cloudfront";
 import { Construct } from 'constructs';
 import { getOriginShieldRegion } from './origin-shield';
-import { createHash } from 'crypto';
 
 // Stack Parameters
 
