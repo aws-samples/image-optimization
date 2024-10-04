@@ -128,7 +128,7 @@ export class ImageOptimizationStack extends Stack {
       });
     }
 
-    // Prepare env variable for Lambda 
+    // Prepare env variables for Lambda 
     var lambdaEnv: LambdaEnv = {
       originalImageBucketName: originalImageBucket.bucketName,
       transformedImageCacheTTL: S3_TRANSFORMED_IMAGE_CACHE_TTL,
