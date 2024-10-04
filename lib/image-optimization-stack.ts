@@ -4,6 +4,7 @@
 import { Fn, Stack, StackProps, RemovalPolicy, aws_s3 as s3, aws_s3_deployment as s3deploy, aws_cloudfront as cloudfront, aws_cloudfront_origins as origins, aws_lambda as lambda, aws_iam as iam, Duration, CfnOutput, aws_logs as logs } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { getOriginShieldRegion } from './origin-shield';
+import { ImageProcessingLambdaEnvironment } from './types';
 
 // Stack Parameters
 
@@ -25,22 +26,6 @@ var LAMBDA_MEMORY = '1500';
 var LAMBDA_TIMEOUT = '60';
 // Whether to deploy a sample website referenced in https://aws.amazon.com/blogs/networking-and-content-delivery/image-optimization-using-amazon-cloudfront-and-aws-lambda/
 var DEPLOY_SAMPLE_WEBSITE = 'false';
-
-type ImageDeliveryCacheBehaviorConfig = {
-  origin: any;
-  compress: any;
-  viewerProtocolPolicy: any;
-  cachePolicy: any;
-  functionAssociations: any;
-  responseHeadersPolicy?: any;
-};
-
-type LambdaEnv = {
-  originalImageBucketName: string,
-  transformedImageBucketName?: any;
-  transformedImageCacheTTL: string,
-  maxImageSize: string,
-}
 
 export class ImageOptimizationStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -128,11 +113,11 @@ export class ImageOptimizationStack extends Stack {
     }
 
     // Prepare env variables for Lambda 
-    var lambdaEnv: LambdaEnv = {
+    const lambdaEnv = {
       originalImageBucketName: originalImageBucket.bucketName,
       transformedImageCacheTTL: S3_TRANSFORMED_IMAGE_CACHE_TTL,
       maxImageSize: MAX_IMAGE_SIZE,
-    };
+    } as ImageProcessingLambdaEnvironment;
     if (transformedImageBucket) lambdaEnv.transformedImageBucketName = transformedImageBucket.bucketName;
 
     // Statements of the IAM policy to attach to Lambda
@@ -194,47 +179,45 @@ export class ImageOptimizationStack extends Stack {
       functionName: `urlRewriteFunction${this.node.addr}`,
     });
 
-    var imageDeliveryCacheBehaviorConfig: ImageDeliveryCacheBehaviorConfig = {
-      origin: imageOrigin,
-      viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-      compress: false,
-      cachePolicy: new cloudfront.CachePolicy(this, `ImageCachePolicy${this.node.addr}`, {
-        defaultTtl: Duration.hours(24),
-        maxTtl: Duration.days(365),
-        minTtl: Duration.seconds(0),
-        queryStringBehavior: cloudfront.CacheQueryStringBehavior.all()
-      }),
-      functionAssociations: [{
-        eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
-        function: urlRewriteFunction,
-      }],
-    }
+    // Create custom response headers policy if necessary - CORS allowed for all origins
+    const getCorsResponsePolicy = () => new cloudfront.ResponseHeadersPolicy(this, 'CorsResponsePolicy', {
+      responseHeadersPolicyName: `CorsResponsePolicy${this.node.addr}`,
+      corsBehavior: {
+        accessControlAllowCredentials: false,
+        accessControlAllowHeaders: ['*'],
+        accessControlAllowMethods: ['GET'],
+        accessControlAllowOrigins: ['*'],
+        accessControlMaxAge: Duration.seconds(600),
+        originOverride: false,
+      },
+      // Recognize image requests that were processed by this solution
+      customHeadersBehavior: {
+        customHeaders: [
+          { header: 'x-aws-image-optimization', value: 'v1.0', override: true },
+          { header: 'vary', value: 'accept', override: true },
+        ],
+      }
+    });
 
-    if (CLOUDFRONT_CORS_ENABLED === 'true') {
-      // Create a custom response headers policy. CORS allowed for all origins.
-      const imageResponseHeadersPolicy = new cloudfront.ResponseHeadersPolicy(this, `ResponseHeadersPolicy${this.node.addr}`, {
-        responseHeadersPolicyName: `ImageResponsePolicy${this.node.addr}`,
-        corsBehavior: {
-          accessControlAllowCredentials: false,
-          accessControlAllowHeaders: ['*'],
-          accessControlAllowMethods: ['GET'],
-          accessControlAllowOrigins: ['*'],
-          accessControlMaxAge: Duration.seconds(600),
-          originOverride: false,
-        },
-        // Recognize image requests that were processed by this solution
-        customHeadersBehavior: {
-          customHeaders: [
-            { header: 'x-aws-image-optimization', value: 'v1.0', override: true },
-            { header: 'vary', value: 'accept', override: true },
-          ],
-        }
-      });
-      imageDeliveryCacheBehaviorConfig.responseHeadersPolicy = imageResponseHeadersPolicy;
-    }
     const imageDelivery = new cloudfront.Distribution(this, 'imageDeliveryDistribution', {
       comment: 'image optimization - image delivery',
-      defaultBehavior: imageDeliveryCacheBehaviorConfig
+      defaultBehavior: {
+        origin: imageOrigin,
+        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        compress: false,
+        cachePolicy: new cloudfront.CachePolicy(this, `ImageCachePolicy${this.node.addr}`, {
+          defaultTtl: Duration.hours(24),
+          maxTtl: Duration.days(365),
+          minTtl: Duration.seconds(0),
+          queryStringBehavior: cloudfront.CacheQueryStringBehavior.all()
+        }),
+        functionAssociations: [{
+          eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+          function: urlRewriteFunction,
+        }],
+        // Set CORS headers if CORS enabled
+        responseHeadersPolicy: CLOUDFRONT_CORS_ENABLED === 'true' ? getCorsResponsePolicy() : undefined
+      }
     });
 
     // Add OAC between CloudFront and LambdaURL
