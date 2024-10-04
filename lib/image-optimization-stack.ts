@@ -139,11 +139,10 @@ export class ImageOptimizationStack extends Stack {
       timeout: Duration.seconds(parseInt(LAMBDA_TIMEOUT)),
     });
 
-    // Enable Lambda URL
+    // Enable Lambda URL, get its the domain name and create CloudFront origin
     const imageProcessingURL = imageProcessing.addFunctionUrl();
-
-    // Leverage CDK Intrinsics to get the hostname of the Lambda URL 
     const imageProcessingDomainName = Fn.parseDomainName(imageProcessingURL.url);
+    const imageProcessingLambdaOrigin = new origins.HttpOrigin(imageProcessingDomainName, originShieldOriginProps);
 
     // Create a CloudFront origin: S3 with fallback to Lambda when image needs to be transformed, otherwise with Lambda as sole origin
     var imageOrigin;
@@ -151,7 +150,7 @@ export class ImageOptimizationStack extends Stack {
     if (transformedImageBucket) {
       imageOrigin = new origins.OriginGroup({
         primaryOrigin: origins.S3BucketOrigin.withOriginAccessIdentity(transformedImageBucket, originShieldOriginProps),
-        fallbackOrigin: new origins.HttpOrigin(imageProcessingDomainName, originShieldOriginProps),
+        fallbackOrigin: imageProcessingLambdaOrigin,
         fallbackStatusCodes: [403, 500, 503, 504],
       });
 
@@ -163,7 +162,7 @@ export class ImageOptimizationStack extends Stack {
         })
       );
     } else {
-      imageOrigin = new origins.HttpOrigin(imageProcessingDomainName, originShieldOriginProps);
+      imageOrigin = imageProcessingLambdaOrigin;
     }
 
     // Attach iam policy to the role assumed by Lambda
