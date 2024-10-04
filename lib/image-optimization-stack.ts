@@ -58,7 +58,7 @@ export class ImageOptimizationStack extends Stack {
     S3_TRANSFORMED_IMAGE_CACHE_TTL = this.node.tryGetContext('S3_TRANSFORMED_IMAGE_CACHE_TTL') || S3_TRANSFORMED_IMAGE_CACHE_TTL;
     S3_IMAGE_BUCKET_NAME = this.node.tryGetContext('S3_IMAGE_BUCKET_NAME') || S3_IMAGE_BUCKET_NAME;
     STORE_TRANSFORMED_IMAGES = this.node.tryGetContext('STORE_TRANSFORMED_IMAGES') || STORE_TRANSFORMED_IMAGES;
-    
+
 
     // deploy a sample website for testing if required
     if (DEPLOY_SAMPLE_WEBSITE === 'true') {
@@ -92,7 +92,7 @@ export class ImageOptimizationStack extends Stack {
     // For the bucket having original images, either use an external one, or create one with some samples photos.
     var originalImageBucket;
     var transformedImageBucket;
-    
+
     if (S3_IMAGE_BUCKET_NAME) {
       originalImageBucket = s3.Bucket.fromBucketName(this, 'imported-original-image-bucket', S3_IMAGE_BUCKET_NAME);
       new CfnOutput(this, 'OriginalImagesS3Bucket', {
@@ -251,7 +251,7 @@ export class ImageOptimizationStack extends Stack {
     // ADD OAC between CloudFront and LambdaURL
     const oac = new cloudfront.CfnOriginAccessControl(this, "OAC", {
       originAccessControlConfig: {
-        name: `oac${this.node.addr}`, 
+        name: `oac${this.node.addr}`,
         originAccessControlOriginType: "lambda",
         signingBehavior: "always",
         signingProtocol: "sigv4",
@@ -259,7 +259,7 @@ export class ImageOptimizationStack extends Stack {
     });
 
     const cfnImageDelivery = imageDelivery.node.defaultChild as CfnDistribution;
-    cfnImageDelivery.addPropertyOverride(`DistributionConfig.Origins.${(STORE_TRANSFORMED_IMAGES === 'true')?"1":"0"}.OriginAccessControlId`, oac.getAtt("Id"));
+    cfnImageDelivery.addPropertyOverride(`DistributionConfig.Origins.${(STORE_TRANSFORMED_IMAGES === 'true') ? "1" : "0"}.OriginAccessControlId`, oac.getAtt("Id"));
 
     imageProcessing.addPermission("AllowCloudFrontServicePrincipal", {
       principal: new iam.ServicePrincipal("cloudfront.amazonaws.com"),
