@@ -74,7 +74,7 @@ export class ImageOptimizationStack extends Stack {
         comment: 'image optimization - sample website',
         defaultRootObject: 'index.html',
         defaultBehavior: {
-          origin: new origins.S3Origin(sampleWebsiteBucket),
+          origin: origins.S3BucketOrigin.withOriginAccessIdentity(sampleWebsiteBucket),
           viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         }
       });
