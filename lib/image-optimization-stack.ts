@@ -30,6 +30,7 @@ var DEPLOY_SAMPLE_WEBSITE = 'false';
 
 type ImageDeliveryCacheBehaviorConfig = {
   origin: any;
+  compress: any;
   viewerProtocolPolicy: any;
   cachePolicy: any;
   functionAssociations: any;
