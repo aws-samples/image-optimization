@@ -136,14 +136,13 @@ export class ImageOptimizationStack extends Stack {
     };
     if (transformedImageBucket) lambdaEnv.transformedImageBucketName = transformedImageBucket.bucketName;
 
-    // IAM policy to read from the S3 bucket containing the original images
-    const s3ReadOriginalImagesPolicy = new iam.PolicyStatement({
-      actions: ['s3:GetObject'],
-      resources: ['arn:aws:s3:::' + originalImageBucket.bucketName + '/*'],
-    });
-
     // Statements of the IAM policy to attach to Lambda
-    var iamPolicyStatements = [s3ReadOriginalImagesPolicy];
+    const imageProcessingLambdaPolicyStatements = [
+      new iam.PolicyStatement({
+        actions: ['s3:GetObject'],
+        resources: ['arn:aws:s3:::' + originalImageBucket.bucketName + '/*']
+      })
+    ];
 
     // Create Lambda for image processing
     const imageProcessing = new lambda.Function(this, 'image-optimization', {
@@ -172,12 +171,13 @@ export class ImageOptimizationStack extends Stack {
         fallbackStatusCodes: [403, 500, 503, 504],
       });
 
-      // Write policy for Lambda on the s3 bucket for transformed images
-      var s3WriteTransformedImagesPolicy = new iam.PolicyStatement({
-        actions: ['s3:PutObject'],
-        resources: ['arn:aws:s3:::' + transformedImageBucket.bucketName + '/*'],
-      });
-      iamPolicyStatements.push(s3WriteTransformedImagesPolicy);
+      // Allow Lambda to push transformed images to S3
+      imageProcessingLambdaPolicyStatements.push(
+        new iam.PolicyStatement({
+          actions: ['s3:PutObject'],
+          resources: ['arn:aws:s3:::' + transformedImageBucket.bucketName + '/*'],
+        })
+      );
     } else {
       imageOrigin = new origins.HttpOrigin(imageProcessingDomainName, originShieldOriginProps);
     }
@@ -185,7 +185,7 @@ export class ImageOptimizationStack extends Stack {
     // Attach iam policy to the role assumed by Lambda
     imageProcessing.role?.attachInlinePolicy(
       new iam.Policy(this, 'read-write-bucket-policy', {
-        statements: iamPolicyStatements,
+        statements: imageProcessingLambdaPolicyStatements,
       }),
     );
 
