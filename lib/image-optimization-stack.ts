@@ -59,6 +59,7 @@ export class ImageOptimizationStack extends Stack {
     S3_IMAGE_BUCKET_NAME = this.node.tryGetContext('S3_IMAGE_BUCKET_NAME') || S3_IMAGE_BUCKET_NAME;
     STORE_TRANSFORMED_IMAGES = this.node.tryGetContext('STORE_TRANSFORMED_IMAGES') || STORE_TRANSFORMED_IMAGES;
 
+    const originShieldOriginProps = { originShieldRegion: CLOUDFRONT_ORIGIN_SHIELD_REGION };
 
     // Deploy a sample website for testing if required
     if (DEPLOY_SAMPLE_WEBSITE === 'true') {
@@ -166,12 +167,8 @@ export class ImageOptimizationStack extends Stack {
 
     if (transformedImageBucket) {
       imageOrigin = new origins.OriginGroup({
-        primaryOrigin: origins.S3BucketOrigin.withOriginAccessIdentity(transformedImageBucket, {
-          originShieldRegion: CLOUDFRONT_ORIGIN_SHIELD_REGION,
-        }),
-        fallbackOrigin: new origins.HttpOrigin(imageProcessingDomainName, {
-          originShieldRegion: CLOUDFRONT_ORIGIN_SHIELD_REGION,
-        }),
+        primaryOrigin: origins.S3BucketOrigin.withOriginAccessIdentity(transformedImageBucket, originShieldOriginProps),
+        fallbackOrigin: new origins.HttpOrigin(imageProcessingDomainName, originShieldOriginProps),
         fallbackStatusCodes: [403, 500, 503, 504],
       });
 
@@ -182,9 +179,7 @@ export class ImageOptimizationStack extends Stack {
       });
       iamPolicyStatements.push(s3WriteTransformedImagesPolicy);
     } else {
-      imageOrigin = new origins.HttpOrigin(imageProcessingDomainName, {
-        originShieldRegion: CLOUDFRONT_ORIGIN_SHIELD_REGION,
-      });
+      imageOrigin = new origins.HttpOrigin(imageProcessingDomainName, originShieldOriginProps);
     }
 
     // Attach iam policy to the role assumed by Lambda
