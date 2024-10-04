@@ -149,16 +149,15 @@ export class ImageOptimizationStack extends Stack {
     var iamPolicyStatements = [s3ReadOriginalImagesPolicy];
 
     // Create Lambda for image processing
-    var lambdaProps = {
-      runtime: lambda.Runtime.NODEJS_20_X,
-      handler: 'index.handler',
+    const imageProcessing = new lambda.Function(this, 'image-optimization', {
       code: lambda.Code.fromAsset('functions/image-processing'),
-      timeout: Duration.seconds(parseInt(LAMBDA_TIMEOUT)),
-      memorySize: parseInt(LAMBDA_MEMORY),
       environment: lambdaEnv,
+      handler: 'index.handler',
       logRetention: logs.RetentionDays.ONE_DAY,
-    };
-    var imageProcessing = new lambda.Function(this, 'image-optimization', lambdaProps);
+      memorySize: parseInt(LAMBDA_MEMORY),
+      runtime: lambda.Runtime.NODEJS_20_X,
+      timeout: Duration.seconds(parseInt(LAMBDA_TIMEOUT)),
+    });
 
     // Enable Lambda URL
     const imageProcessingURL = imageProcessing.addFunctionUrl();
