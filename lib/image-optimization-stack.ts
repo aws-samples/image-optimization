@@ -47,7 +47,7 @@ export class ImageOptimizationStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
-    // Change stack parameters based on provided context
+    // Update stack parameters based on provided context
     CLOUDFRONT_ORIGIN_SHIELD_REGION = this.node.tryGetContext('CLOUDFRONT_ORIGIN_SHIELD_REGION') || CLOUDFRONT_ORIGIN_SHIELD_REGION;
     CLOUDFRONT_CORS_ENABLED = this.node.tryGetContext('CLOUDFRONT_CORS_ENABLED') || CLOUDFRONT_CORS_ENABLED;
     DEPLOY_SAMPLE_WEBSITE = this.node.tryGetContext('DEPLOY_SAMPLE_WEBSITE') || DEPLOY_SAMPLE_WEBSITE;
@@ -60,7 +60,7 @@ export class ImageOptimizationStack extends Stack {
     STORE_TRANSFORMED_IMAGES = this.node.tryGetContext('STORE_TRANSFORMED_IMAGES') || STORE_TRANSFORMED_IMAGES;
 
 
-    // deploy a sample website for testing if required
+    // Deploy a sample website for testing if required
     if (DEPLOY_SAMPLE_WEBSITE === 'true') {
       var sampleWebsiteBucket = new s3.Bucket(this, 's3-sample-website-bucket', {
         removalPolicy: RemovalPolicy.DESTROY,
@@ -118,7 +118,7 @@ export class ImageOptimizationStack extends Stack {
       });
     }
 
-    // create bucket for transformed images if enabled in the architecture
+    // Create bucket for transformed images if enabled in the architecture
     if (STORE_TRANSFORMED_IMAGES === 'true') {
       transformedImageBucket = new s3.Bucket(this, 's3-transformed-image-bucket', {
         removalPolicy: RemovalPolicy.DESTROY,
@@ -131,7 +131,7 @@ export class ImageOptimizationStack extends Stack {
       });
     }
 
-    // prepare env variable for Lambda 
+    // Prepare env variable for Lambda 
     var lambdaEnv: LambdaEnv = {
       originalImageBucketName: originalImageBucket.bucketName,
       transformedImageCacheTTL: S3_TRANSFORMED_IMAGE_CACHE_TTL,
@@ -145,7 +145,7 @@ export class ImageOptimizationStack extends Stack {
       resources: ['arn:aws:s3:::' + originalImageBucket.bucketName + '/*'],
     });
 
-    // statements of the IAM policy to attach to Lambda
+    // Statements of the IAM policy to attach to Lambda
     var iamPolicyStatements = [s3ReadOriginalImagesPolicy];
 
     // Create Lambda for image processing
@@ -180,7 +180,7 @@ export class ImageOptimizationStack extends Stack {
         fallbackStatusCodes: [403, 500, 503, 504],
       });
 
-      // write policy for Lambda on the s3 bucket for transformed images
+      // Write policy for Lambda on the s3 bucket for transformed images
       var s3WriteTransformedImagesPolicy = new iam.PolicyStatement({
         actions: ['s3:PutObject'],
         resources: ['arn:aws:s3:::' + transformedImageBucket.bucketName + '/*'],
@@ -192,7 +192,7 @@ export class ImageOptimizationStack extends Stack {
       });
     }
 
-    // attach iam policy to the role assumed by Lambda
+    // Attach iam policy to the role assumed by Lambda
     imageProcessing.role?.attachInlinePolicy(
       new iam.Policy(this, 'read-write-bucket-policy', {
         statements: iamPolicyStatements,
@@ -222,7 +222,7 @@ export class ImageOptimizationStack extends Stack {
     }
 
     if (CLOUDFRONT_CORS_ENABLED === 'true') {
-      // Creating a custom response headers policy. CORS allowed for all origins.
+      // Create a custom response headers policy. CORS allowed for all origins.
       const imageResponseHeadersPolicy = new cloudfront.ResponseHeadersPolicy(this, `ResponseHeadersPolicy${this.node.addr}`, {
         responseHeadersPolicyName: `ImageResponsePolicy${this.node.addr}`,
         corsBehavior: {
@@ -233,7 +233,7 @@ export class ImageOptimizationStack extends Stack {
           accessControlMaxAge: Duration.seconds(600),
           originOverride: false,
         },
-        // recognizing image requests that were processed by this solution
+        // Recognize image requests that were processed by this solution
         customHeadersBehavior: {
           customHeaders: [
             { header: 'x-aws-image-optimization', value: 'v1.0', override: true },
@@ -248,7 +248,7 @@ export class ImageOptimizationStack extends Stack {
       defaultBehavior: imageDeliveryCacheBehaviorConfig
     });
 
-    // ADD OAC between CloudFront and LambdaURL
+    // Add OAC between CloudFront and LambdaURL
     const oac = new cloudfront.CfnOriginAccessControl(this, "OAC", {
       originAccessControlConfig: {
         name: `oac${this.node.addr}`,
