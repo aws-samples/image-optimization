@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT-0
 
 import { Fn, Stack, StackProps, RemovalPolicy, aws_s3 as s3, aws_s3_deployment as s3deploy, aws_cloudfront as cloudfront, aws_cloudfront_origins as origins, aws_lambda as lambda, aws_iam as iam, Duration, CfnOutput, aws_logs as logs } from 'aws-cdk-lib';
-import { CfnDistribution } from "aws-cdk-lib/aws-cloudfront";
 import { Construct } from 'constructs';
 import { getOriginShieldRegion } from './origin-shield';
 
@@ -248,7 +247,7 @@ export class ImageOptimizationStack extends Stack {
       },
     });
 
-    const cfnImageDelivery = imageDelivery.node.defaultChild as CfnDistribution;
+    const cfnImageDelivery = imageDelivery.node.defaultChild as cloudfront.CfnDistribution;
     cfnImageDelivery.addPropertyOverride(`DistributionConfig.Origins.${(STORE_TRANSFORMED_IMAGES === 'true') ? "1" : "0"}.OriginAccessControlId`, oac.getAtt("Id"));
 
     imageProcessing.addPermission("AllowCloudFrontServicePrincipal", {
