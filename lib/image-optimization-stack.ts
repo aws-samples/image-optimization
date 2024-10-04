@@ -175,7 +175,7 @@ export class ImageOptimizationStack extends Stack {
 
     // Create a CloudFront Function for url rewrites
     const urlRewriteFunction = new cloudfront.Function(this, 'urlRewrite', {
-      code: cloudfront.FunctionCode.fromFile({ filePath: 'functions/url-rewrite/index.js', }),
+      code: cloudfront.FunctionCode.fromFile({ filePath: 'functions/url-rewrite/index.js' }),
       functionName: `urlRewriteFunction${this.node.addr}`,
     });
 
