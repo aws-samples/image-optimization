@@ -123,11 +123,7 @@ export class ImageOptimizationStack extends Stack {
       transformedImageBucket = new s3.Bucket(this, 's3-transformed-image-bucket', {
         removalPolicy: RemovalPolicy.DESTROY,
         autoDeleteObjects: true,
-        lifecycleRules: [
-          {
-            expiration: Duration.days(parseInt(S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION)),
-          },
-        ],
+        lifecycleRules: [{ expiration: Duration.days(parseInt(S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION)) }],
       });
     }
 
