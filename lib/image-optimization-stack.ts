@@ -166,7 +166,7 @@ export class ImageOptimizationStack extends Stack {
 
     if (transformedImageBucket) {
       imageOrigin = new origins.OriginGroup({
-        primaryOrigin: new origins.S3Origin(transformedImageBucket, {
+        primaryOrigin: origins.S3BucketOrigin.withOriginAccessIdentity(transformedImageBucket, {
           originShieldRegion: CLOUDFRONT_ORIGIN_SHIELD_REGION,
         }),
         fallbackOrigin: new origins.HttpOrigin(imageProcessingDomainName, {
