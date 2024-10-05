@@ -13,7 +13,7 @@ export const sampleWebsite = (stack: Stack) => {
     enforceSSL: true,
     removalPolicy: RemovalPolicy.DESTROY
   });
-  return new Distribution(stack, 'websiteDeliveryDistribution', {
+  return new Distribution(stack, 'website-delivery-distribution', {
     comment: 'Image Optimization - sample website',
     defaultBehavior: {
       origin: S3BucketOrigin.withOriginAccessControl(bucket),
