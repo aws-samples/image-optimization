@@ -24,13 +24,13 @@ export class ImageOptimizationStack extends Stack {
     const S3_TRANSFORMED_IMAGE_EXPIRATION_DAYS = getContext.number('S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION', 90);
     const STORE_TRANSFORMED_IMAGES = getContext.boolean('STORE_TRANSFORMED_IMAGES', true);
 
-    // If DEPLOY_SAMPLE_WEBSITE is true, this stack will deploy an additional, sample website to see th
+    // If DEPLOY_SAMPLE_WEBSITE is true, this stack will deploy an additional, sample website to showcase the solution
+    // Architecture of the sample website is described at https://aws.amazon.com/blogs/networking-and-content-delivery/image-optimization-using-amazon-cloudfront-and-aws-lambda/
     if (getContext.boolean('DEPLOY_SAMPLE_WEBSITE')) {
-      // Architecture of the sample website is described at https://aws.amazon.com/blogs/networking-and-content-delivery/image-optimization-using-amazon-cloudfront-and-aws-lambda/
       deploySampleWebsite(this);
     }
 
-    // ****************** Image Optimization Stack Resources ******************
+    // ********************* Image Optimization Resources *********************
 
     // For original images, use existing S3 bucket if provided, otherwise create a new one with sample images
     let originalImageBucket: s3.IBucket;
@@ -99,7 +99,7 @@ export class ImageOptimizationStack extends Stack {
         customHeaders: [
           { header: 'x-aws-image-optimization', value: 'v1.0', override: true },
           { header: 'vary', value: 'accept', override: true },
-        ],
+        ]
       }
     });
 
@@ -140,7 +140,7 @@ export class ImageOptimizationStack extends Stack {
           function: new cloudfront.Function(this, 'urlRewrite', {
             code: cloudfront.FunctionCode.fromFile({ filePath: 'functions/url-rewrite/index.js' }),
             functionName: `urlRewriteFunction${this.node.addr}`,
-          }),
+          })
         }],
         origin: STORE_TRANSFORMED_IMAGES ? getS3OriginWithFallbackToLambda() : imageProcessingLambdaOrigin,
         responseHeadersPolicy: CLOUDFRONT_CORS_ENABLED ? getCorsResponsePolicy() : undefined,
@@ -155,7 +155,7 @@ export class ImageOptimizationStack extends Stack {
         originAccessControlOriginType: 'lambda',
         signingBehavior: 'always',
         signingProtocol: 'sigv4',
-      },
+      }
     });
 
     const cfnImageDelivery = imageDelivery.node.defaultChild as cloudfront.CfnDistribution;
@@ -164,7 +164,7 @@ export class ImageOptimizationStack extends Stack {
       principal: new iam.ServicePrincipal("cloudfront.amazonaws.com"),
       action: 'lambda:InvokeFunctionUrl',
       sourceArn: `arn:aws:cloudfront::${this.account}:distribution/${imageDelivery.distributionId}`
-    })
+    });
 
     new CfnOutput(this, 'image-delivery-domain', {
       description: 'Domain name of image delivery',
