@@ -30,7 +30,7 @@ export class ImageOptimizationStack extends Stack {
       deploySampleWebsite(this);
     }
 
-    // *********************** Image Optimization Stack ***********************
+    // ****************** Image Optimization Stack Resources ******************
 
     // For original images, use existing S3 bucket if provided, otherwise create a new one with sample images
     let originalImageBucket: s3.IBucket;
@@ -44,13 +44,13 @@ export class ImageOptimizationStack extends Stack {
         enforceSSL: true,
         autoDeleteObjects: true,
       });
-      new s3deploy.BucketDeployment(this, 'DeployWebsite', {
+      new s3deploy.BucketDeployment(this, 'deploy-website', {
         sources: [s3deploy.Source.asset('./image-sample')],
         destinationBucket: originalImageBucket,
         destinationKeyPrefix: 'images/rio/',
       });
     };
-    new CfnOutput(this, 'OriginalImagesS3Bucket', {
+    new CfnOutput(this, 'original-images-s3-bucket', {
       description: 'S3 bucket storing original images',
       value: originalImageBucket.bucketName
     });
@@ -84,7 +84,7 @@ export class ImageOptimizationStack extends Stack {
     const imageProcessingLambdaOrigin = new origins.HttpOrigin(imageProcessingDomainName, originProps);
 
     // Create custom response headers policy with CORS requests allowed for all origins
-    const getCorsResponsePolicy = () => new cloudfront.ResponseHeadersPolicy(this, 'CorsResponsePolicy', {
+    const getCorsResponsePolicy = () => new cloudfront.ResponseHeadersPolicy(this, 'cors-response-policy', {
       responseHeadersPolicyName: `CorsResponsePolicy${this.node.addr}`,
       corsBehavior: {
         accessControlAllowCredentials: false,
@@ -125,7 +125,7 @@ export class ImageOptimizationStack extends Stack {
     };
 
     // Create content delivery distribution with Amazon CloudFront for optimized images
-    const imageDelivery = new cloudfront.Distribution(this, 'imageDeliveryDistribution', {
+    const imageDelivery = new cloudfront.Distribution(this, 'image-delivery-distribution', {
       comment: 'Image Optimization - image delivery',
       defaultBehavior: {
         cachePolicy: new cloudfront.CachePolicy(this, `ImageCachePolicy${this.node.addr}`, {
@@ -149,24 +149,24 @@ export class ImageOptimizationStack extends Stack {
     });
 
     // Add OAC between CloudFront and LambdaURL
-    const oac = new cloudfront.CfnOriginAccessControl(this, "OAC", {
+    const oac = new cloudfront.CfnOriginAccessControl(this, 'origin-access-control', {
       originAccessControlConfig: {
         name: `oac${this.node.addr}`,
-        originAccessControlOriginType: "lambda",
-        signingBehavior: "always",
-        signingProtocol: "sigv4",
+        originAccessControlOriginType: 'lambda',
+        signingBehavior: 'always',
+        signingProtocol: 'sigv4',
       },
     });
 
     const cfnImageDelivery = imageDelivery.node.defaultChild as cloudfront.CfnDistribution;
-    cfnImageDelivery.addPropertyOverride(`DistributionConfig.Origins.${STORE_TRANSFORMED_IMAGES ? "1" : "0"}.OriginAccessControlId`, oac.getAtt("Id"));
-    imageProcessing.addPermission("AllowCloudFrontServicePrincipal", {
+    cfnImageDelivery.addPropertyOverride(`DistributionConfig.Origins.${STORE_TRANSFORMED_IMAGES ? '1' : '0'}.OriginAccessControlId`, oac.getAtt('Id'));
+    imageProcessing.addPermission('AllowCloudFrontServicePrincipal', {
       principal: new iam.ServicePrincipal("cloudfront.amazonaws.com"),
-      action: "lambda:InvokeFunctionUrl",
+      action: 'lambda:InvokeFunctionUrl',
       sourceArn: `arn:aws:cloudfront::${this.account}:distribution/${imageDelivery.distributionId}`
     })
 
-    new CfnOutput(this, 'ImageDeliveryDomain', {
+    new CfnOutput(this, 'image-delivery-domain', {
       description: 'Domain name of image delivery',
       value: imageDelivery.distributionDomainName
     });
