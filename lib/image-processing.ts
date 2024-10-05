@@ -76,8 +76,8 @@ export const imageOptimizationSolution = (stack: Stack, props: ImageOptimization
     // Recognize image requests that were processed by this solution
     customHeadersBehavior: {
       customHeaders: [
-        { header: 'x-aws-image-optimization', value: 'v1.0', override: true },
         { header: 'vary', value: 'accept', override: true },
+        { header: 'x-aws-image-optimization', value: 'v1.0', override: true },
       ]
     }
   });
