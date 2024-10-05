@@ -38,52 +38,17 @@ export class ImageOptimizationStack extends Stack {
     LAMBDA_MEMORY = this.node.tryGetContext('LAMBDA_MEMORY') || LAMBDA_MEMORY;
     LAMBDA_TIMEOUT = this.node.tryGetContext('LAMBDA_TIMEOUT') || LAMBDA_TIMEOUT;
     MAX_IMAGE_SIZE = this.node.tryGetContext('MAX_IMAGE_SIZE') || MAX_IMAGE_SIZE;
-    S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION = this.node.tryGetContext('S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION') || S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION;
     S3_TRANSFORMED_IMAGE_CACHE_TTL = this.node.tryGetContext('S3_TRANSFORMED_IMAGE_CACHE_TTL') || S3_TRANSFORMED_IMAGE_CACHE_TTL;
+    S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION = this.node.tryGetContext('S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION') || S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION;
     S3_IMAGE_BUCKET_NAME = this.node.tryGetContext('S3_IMAGE_BUCKET_NAME') || S3_IMAGE_BUCKET_NAME;
     STORE_TRANSFORMED_IMAGES = this.node.tryGetContext('STORE_TRANSFORMED_IMAGES') || STORE_TRANSFORMED_IMAGES;
 
     const originShieldOriginProps = { originShieldRegion: CLOUDFRONT_ORIGIN_SHIELD_REGION };
 
-    // Deploy a sample website for testing if required
-    if (DEPLOY_SAMPLE_WEBSITE === 'true') {
-      var sampleWebsiteBucket = new s3.Bucket(this, 's3-sample-website-bucket', {
-        removalPolicy: RemovalPolicy.DESTROY,
-        blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-        encryption: s3.BucketEncryption.S3_MANAGED,
-        enforceSSL: true,
-        autoDeleteObjects: true,
-      });
-
-      var sampleWebsiteDelivery = new cloudfront.Distribution(this, 'websiteDeliveryDistribution', {
-        comment: 'image optimization - sample website',
-        defaultRootObject: 'index.html',
-        defaultBehavior: {
-          origin: origins.S3BucketOrigin.withOriginAccessIdentity(sampleWebsiteBucket),
-          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-        }
-      });
-
-      new CfnOutput(this, 'SampleWebsiteDomain', {
-        description: 'Sample website domain',
-        value: sampleWebsiteDelivery.distributionDomainName
-      });
-      new CfnOutput(this, 'SampleWebsiteS3Bucket', {
-        description: 'S3 bucket use by the sample website',
-        value: sampleWebsiteBucket.bucketName
-      });
-    }
-
-    // For the bucket having original images, either use an external one, or create one with some samples photos.
-    var originalImageBucket;
-    var transformedImageBucket;
-
+    // For the bucket having original images, wse existing bucket if provided, otherwise create a new one with sample images
+    let originalImageBucket;
     if (S3_IMAGE_BUCKET_NAME) {
       originalImageBucket = s3.Bucket.fromBucketName(this, 'imported-original-image-bucket', S3_IMAGE_BUCKET_NAME);
-      new CfnOutput(this, 'OriginalImagesS3Bucket', {
-        description: 'S3 bucket where original images are stored',
-        value: originalImageBucket.bucketName
-      });
     } else {
       originalImageBucket = new s3.Bucket(this, 's3-sample-original-image-bucket', {
         removalPolicy: RemovalPolicy.DESTROY,
