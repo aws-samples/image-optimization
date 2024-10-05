@@ -10,7 +10,7 @@ import {
   Duration, Fn, RemovalPolicy, Stack
 } from 'aws-cdk-lib';
 
-type ImageProcessingProps = {
+type ImageOptimizationProps = {
   corsEnabled: boolean,
   originalImageBucket: s3.IBucket,
   originShieldRegion: string,
@@ -22,7 +22,7 @@ type ImageProcessingProps = {
   storeTransformedImages: boolean,
 }
 
-export const imageOptimizationSolution = (stack: Stack, props: ImageProcessingProps) => {
+export const imageOptimizationSolution = (stack: Stack, props: ImageOptimizationProps) => {
   const {
     corsEnabled,
     originalImageBucket,

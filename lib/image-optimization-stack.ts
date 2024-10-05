@@ -3,8 +3,8 @@
 import { aws_s3 as s3, aws_s3_deployment as s3deploy, Duration, CfnOutput, RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { readContext } from './cdk-context-utils';
-import { sampleWebsite } from './image-optimization-sample-website';
-import { imageOptimizationSolution } from './image-optimization-solution';
+import { sampleWebsite } from './sample-website';
+import { imageOptimizationSolution } from './image-processing';
 import { getOriginShieldRegion } from './origin-shield';
 
 export class ImageOptimizationStack extends Stack {
@@ -59,7 +59,7 @@ export class ImageOptimizationStack extends Stack {
     });
 
     // Create Amazon CloudFront distribution to deliver optimized images
-    const imageOptimization = imageOptimizationSolution(this, {
+    const imageDelivery = imageOptimizationSolution(this, {
       corsEnabled: CORS_ENABLED,
       lambdaMemory: LAMBDA_MEMORY,
       lambdaTimeout: Duration.seconds(LAMBDA_TIMEOUT_SECONDS),
@@ -72,7 +72,7 @@ export class ImageOptimizationStack extends Stack {
     });
     new CfnOutput(this, 'image-delivery-domain', {
       description: 'Image delivery domain',
-      value: imageOptimization.distributionDomainName
+      value: imageDelivery.distributionDomainName
     });
   }
 }
