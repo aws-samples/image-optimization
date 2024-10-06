@@ -64,7 +64,7 @@ export const imageOptimizationSolution = (stack: Stack, props: ImageOptimization
 
   // Create custom response headers policy with CORS requests allowed for all origins
   const getCorsResponsePolicy = () => new cloudfront.ResponseHeadersPolicy(stack, 'cors-response-policy', {
-    responseHeadersPolicyName: `CorsResponsePolicy${stack.node.addr}`,
+    responseHeadersPolicyName: 'CorsResponsePolicy',
     corsBehavior: {
       accessControlAllowCredentials: false,
       accessControlAllowHeaders: ['*'],
@@ -107,7 +107,7 @@ export const imageOptimizationSolution = (stack: Stack, props: ImageOptimization
   const imageDelivery = new cloudfront.Distribution(stack, 'image-delivery-distribution', {
     comment: 'Image Optimization - image delivery',
     defaultBehavior: {
-      cachePolicy: new cloudfront.CachePolicy(stack, `ImageCachePolicy${stack.node.addr}`, {
+      cachePolicy: new cloudfront.CachePolicy(stack, 'ImageCachePolicy', {
         defaultTtl: Duration.hours(24),
         maxTtl: Duration.days(365),
         minTtl: Duration.seconds(0),
@@ -116,9 +116,9 @@ export const imageOptimizationSolution = (stack: Stack, props: ImageOptimization
       compress: false,
       functionAssociations: [{
         eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
-        function: new cloudfront.Function(stack, 'urlRewrite', {
+        function: new cloudfront.Function(stack, 'url-rewrite', {
           code: cloudfront.FunctionCode.fromFile({ filePath: 'functions/url-rewrite/index.js' }),
-          functionName: `urlRewriteFunction${stack.node.addr}`,
+          functionName: 'urlRewriteFunction',
         })
       }],
       origin: storeTransformedImages ? getS3OriginWithFallbackToLambda() : imageProcessingLambdaOrigin,
@@ -130,7 +130,7 @@ export const imageOptimizationSolution = (stack: Stack, props: ImageOptimization
   // Add OAC between CloudFront and LambdaURL
   const oac = new cloudfront.CfnOriginAccessControl(stack, 'origin-access-control', {
     originAccessControlConfig: {
-      name: `oac${stack.node.addr}`,
+      name: 'lambda-oac',
       originAccessControlOriginType: 'lambda',
       signingBehavior: 'always',
       signingProtocol: 'sigv4',
@@ -140,8 +140,8 @@ export const imageOptimizationSolution = (stack: Stack, props: ImageOptimization
   const cfnImageDelivery = imageDelivery.node.defaultChild as cloudfront.CfnDistribution;
   cfnImageDelivery.addPropertyOverride(`DistributionConfig.Origins.${storeTransformedImages ? '1' : '0'}.OriginAccessControlId`, oac.getAtt('Id'));
   imageProcessing.addPermission('AllowCloudFrontServicePrincipal', {
-    principal: new iam.ServicePrincipal("cloudfront.amazonaws.com"),
     action: 'lambda:InvokeFunctionUrl',
+    principal: new iam.ServicePrincipal('cloudfront.amazonaws.com'),
     sourceArn: `arn:aws:cloudfront::${stack.account}:distribution/${imageDelivery.distributionId}`
   });
 
