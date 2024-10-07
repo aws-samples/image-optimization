@@ -1,6 +1,6 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT-0
-import { aws_s3 as s3, aws_s3_deployment as s3deploy, Duration, CfnOutput, RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib';
+import { aws_s3 as s3, aws_s3_deployment as s3deploy, CfnOutput, Duration, RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { readContext } from './cdk-context-utils';
 import { sampleWebsite } from './sample-website';
