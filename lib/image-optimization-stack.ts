@@ -213,8 +213,7 @@ export class ImageOptimizationStack extends Stack {
       cachePolicy: new cloudfront.CachePolicy(this, `ImageCachePolicy${this.node.addr}`, {
         defaultTtl: Duration.hours(24),
         maxTtl: Duration.days(365),
-        minTtl: Duration.seconds(0),
-        queryStringBehavior: cloudfront.CacheQueryStringBehavior.all()
+        minTtl: Duration.seconds(0)
       }),
       functionAssociations: [{
         eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
