@@ -17,17 +17,18 @@ Note the following:
 * To prevent from unauthorized invocations of the Lambda function, CloudFront is configured with OAC to sign requests using sigV4 before sending them to invoke the Lambda service.
 
 ## Deploy the solution using CDK
+
+> [!NOTE]
+> This solution is using [sharp](https://github.com/lovell/sharp) library for image processing. Your local development environment and the image processing Lambda function environment may be using different CPU and OS architectures - for example, when you are on an M1 Mac, trying to build code for a Linux-based, x86 Lambda runtime. If necessary, the solution will automatically perform a [cross-platform](https://sharp.pixelplumbing.com/install#cross-platform) installation of all required dependencies. **Ensure your local npm version is 10.4.0 or later**, to correctly leverage npm flags for native dependency management and take advantage of Lambda function size optimizations.
+
 ```
-git clone https://github.com/aws-samples/image-optimization.git 
+git clone https://github.com/aws-samples/image-optimization.git
 cd image-optimization
 npm install
 cdk bootstrap
 npm run build
 cdk deploy
 ```
-
-> [!TIP]
-> The solution will use [sharp](https://github.com/lovell/sharp) library to process image data. Using sharp may require a [cross-platform](https://sharp.pixelplumbing.com/install#cross-platform) installation, if you're running a different OS and/or CPU architecture locally. The minimum required npm version for correct installation of cross-platform, native libraries is version 10.1.0 ([changelog](https://docs.npmjs.com/cli/v10/using-npm/changelog#1010-2023-09-08)), but **we recommend using npm 10.4.0 or later** to make use of [all npm flags](https://github.com/lovell/sharp/commit/ba843002be2b8318921776804d83411dc2d1ee5e) for native dependency management and taking advantage of Lambda function size optimizations.
 
 When the deployment is completed within minutes, the CDK output will include the domain name of the CloudFront distribution created for image optimization (ImageDeliveryDomain =YOURDISTRIBUTION.cloudfront.net). The stack will include an S3 bucket with sample images (OriginalImagesS3Bucket = YourS3BucketWithOriginalImagesGeneratedName). To verify that it is working properly, test the following optimized image URL https:// YOURDISTRIBUTION.cloudfront.net/images/rio/1.jpeg?format=auto&width=300.
 
