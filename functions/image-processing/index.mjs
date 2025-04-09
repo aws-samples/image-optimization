@@ -33,6 +33,9 @@ export const handler = async (event) => {
         originalImageBody = getOriginalImageCommandOutput.Body.transformToByteArray();
         contentType = getOriginalImageCommandOutput.ContentType;
     } catch (error) {
+        if (error.name === "NoSuchKey") {
+          return sendError(404, "The requested image does not exist", error);
+        }
         return sendError(500, 'Error downloading original image', error);
     }
     let transformedImage = Sharp(await originalImageBody, { failOn: 'none', animated: true });
