@@ -9,7 +9,7 @@ function handler(event) {
     if (request.querystring) {
         Object.keys(request.querystring).forEach(operation => {
             switch (operation.toLowerCase()) {
-                case 'format': 
+                case 'format':
                     var SUPPORTED_FORMATS = ['auto', 'jpeg', 'webp', 'avif', 'png', 'svg', 'gif'];
                     if (request.querystring[operation]['value'] && SUPPORTED_FORMATS.includes(request.querystring[operation]['value'].toLowerCase())) {
                         var format = request.querystring[operation]['value'].toLowerCase(); // normalize to lowercase
@@ -53,6 +53,23 @@ function handler(event) {
                         }
                     }
                     break;
+                case 'dpr':
+                    if (request.querystring[operation]['value']) {
+                        var dpr = parseFloat(request.querystring[operation]['value']);
+                        if (!isNaN(dpr) && dpr > 0) {
+                            // Optionally cap dpr, e.g. if (dpr > 3) dpr = 3;
+                            normalizedOperations['dpr'] = dpr.toString();
+                        }
+                    }
+                    break;
+                case 'fit':
+                    if (request.querystring[operation]['value']) {
+                        var fit = request.querystring[operation]['value'].toLowerCase();
+                        if (['contain', 'cover', 'fill', 'inside','outside'].includes(fit)) {
+                            normalizedOperations['fit'] = fit;
+                        }
+                    }
+                    break;
                 default: break;
             }
         });
@@ -64,15 +81,16 @@ function handler(event) {
             if (normalizedOperations.quality) normalizedOperationsArray.push('quality='+normalizedOperations.quality);
             if (normalizedOperations.width) normalizedOperationsArray.push('width='+normalizedOperations.width);
             if (normalizedOperations.height) normalizedOperationsArray.push('height='+normalizedOperations.height);
-            request.uri = originalImagePath + '/' + normalizedOperationsArray.join(',');     
+            if (normalizedOperations.dpr) normalizedOperationsArray.push('dpr='+normalizedOperations.dpr);
+            if (normalizedOperations.fit) normalizedOperationsArray.push('fit='+normalizedOperations.fit);
+            request.uri = originalImagePath + '/' + normalizedOperationsArray.join(',');
         } else {
             // If no valid operation is found, flag the request with /original path suffix
-            request.uri = originalImagePath + '/original';     
+            request.uri = originalImagePath + '/original'
         }
-
     } else {
         // If no query strings are found, flag the request with /original path suffix
-        request.uri = originalImagePath + '/original'; 
+        request.uri = originalImagePath + '/original'
     }
     // remove query strings
     request['querystring'] = {};

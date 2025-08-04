@@ -32,7 +32,7 @@ cdk deploy
 
 When the deployment is completed within minutes, the CDK output will include the domain name of the CloudFront distribution created for image optimization (ImageDeliveryDomain =YOURDISTRIBUTION.cloudfront.net). The stack will include an S3 bucket with sample images (OriginalImagesS3Bucket = YourS3BucketWithOriginalImagesGeneratedName). To verify that it is working properly, test the following optimized image URL https:// YOURDISTRIBUTION.cloudfront.net/images/rio/1.jpeg?format=auto&width=300.
 
-The stack can be deployed with the following parameters. 
+The stack can be deployed with the following parameters.
 * **S3_IMAGE_BUCKET_NAME** Recommended for using an existing S3 bucket where your images are stored when deploying in production. Usage: cdk deploy -c S3_IMAGE_BUCKET_NAME=’YOUR_S3_BUCKET_NAME’. Without specifiying this parameter, the stack creates a new S3 bucket and sample images of Rio the dog ^^
 * **STORE_TRANSFORMED_IMAGES** Allows you to avoid temporary storage of transformed images, every image request is sent for transformation using Lambda upon cache miss in CloudFront.  Usage: cdk deploy -c STORE_TRANSFORMED_IMAGES=false. The default value of this paramter is true.
 * **S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION** When STORE_TRANSFORMED_IMAGES is set to true, this paramter allows you to set the expiration time in days, of the stored transfomed images in S3. After this expiration time, objects are deleted to save storage cost. Usage: cdk deploy -c S3_TRANSFORMED_IMAGE_EXPIRATION_DURATION=10. The default value of this paramter is 90 days.

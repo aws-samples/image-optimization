@@ -10,3 +10,6 @@ cdk.out
 .DS_Store
 
 package-lock.json
+
+# Environment files
+.envrc

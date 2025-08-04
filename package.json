@@ -1,5 +1,5 @@
 {
-  "name": "image-optimization",
+  "name": "@lighthouse/image-optimization",
   "version": "0.1.0",
   "bin": {
     "image-optimization": "bin/image-optimization.js"
