@@ -261,10 +261,16 @@ export class ImageOptimizationStack extends Stack {
     const cfnImageDelivery = imageDelivery.node.defaultChild as CfnDistribution;
     cfnImageDelivery.addPropertyOverride(`DistributionConfig.Origins.${(STORE_TRANSFORMED_IMAGES === 'true')?"1":"0"}.OriginAccessControlId`, oac.getAtt("Id"));
 
-    imageProcessing.addPermission("AllowCloudFrontServicePrincipal", {
+    imageProcessing.addPermission("AllowCloudFrontServicePrincipal1", {
       principal: new iam.ServicePrincipal("cloudfront.amazonaws.com"),
       action: "lambda:InvokeFunctionUrl",
       sourceArn: `arn:aws:cloudfront::${this.account}:distribution/${imageDelivery.distributionId}`
+    })
+
+    imageProcessing.addPermission("AllowCloudFrontServicePrincipal2", {
+      principal: new iam.ServicePrincipal("cloudfront.amazonaws.com"),
+      action: "lambda:InvokeFunction",
+      invokedViaFunctionUrl: true
     })
 
     new CfnOutput(this, 'ImageDeliveryDomain', {
