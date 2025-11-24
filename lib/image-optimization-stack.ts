@@ -6,6 +6,7 @@ import { CfnDistribution } from "aws-cdk-lib/aws-cloudfront";
 import { Construct } from 'constructs';
 import { getOriginShieldRegion } from './origin-shield';
 import { createHash } from 'crypto';
+import { LogGroup } from 'aws-cdk-lib/aws-logs';
 
 // Stack Parameters
 
@@ -75,7 +76,7 @@ export class ImageOptimizationStack extends Stack {
         comment: 'image optimization - sample website',
         defaultRootObject: 'index.html',
         defaultBehavior: {
-          origin: new origins.S3Origin(sampleWebsiteBucket),
+          origin: origins.S3BucketOrigin.withOriginAccessControl(sampleWebsiteBucket),
           viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         }
       });
@@ -151,13 +152,15 @@ export class ImageOptimizationStack extends Stack {
 
     // Create Lambda for image processing
     var lambdaProps = {
-      runtime: lambda.Runtime.NODEJS_20_X,
+      runtime: lambda.Runtime.NODEJS_24_X,
       handler: 'index.handler',
       code: lambda.Code.fromAsset('functions/image-processing'),
       timeout: Duration.seconds(parseInt(LAMBDA_TIMEOUT)),
       memorySize: parseInt(LAMBDA_MEMORY),
       environment: lambdaEnv,
-      logRetention: logs.RetentionDays.ONE_DAY,
+      logGroup: new logs.LogGroup(this, 'MyFunctionLogGroup', {
+          retention: logs.RetentionDays.ONE_DAY,
+        })
     };
     var imageProcessing = new lambda.Function(this, 'image-optimization', lambdaProps);
 
@@ -172,7 +175,7 @@ export class ImageOptimizationStack extends Stack {
 
     if (transformedImageBucket) {
       imageOrigin = new origins.OriginGroup({
-        primaryOrigin: new origins.S3Origin(transformedImageBucket, {
+        primaryOrigin: origins.S3BucketOrigin.withOriginAccessControl(transformedImageBucket, {
           originShieldRegion: CLOUDFRONT_ORIGIN_SHIELD_REGION,
         }),
         fallbackOrigin: new origins.HttpOrigin(imageProcessingDomainName, {
