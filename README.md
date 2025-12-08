@@ -44,6 +44,8 @@ The stack can be deployed with the following parameters.
 * **MAX_IMAGE_SIZE** Specify this parameter to set a maximum request image size in bytes. If STORE_TRANSFORMED_IMAGES=false, requests resulting in images bigger than MAX_IMAGE_SIZE fail to 5xx error. Otherwise, Lambda transforms the image, uploads it to S3, then sends a redirect to the same image location on S3 to avoid hitting the Lambda output size limit. Usage: cdk deploy -c MAX_IMAGE_SIZE=200000. Default value is 4700000 bytes.
 * **DEPLOY_SAMPLE_WEBSITE** set this parameter to true if you want the stack to include another CloudFront distribution pointing to an S3 bucket, that you can use for static website hosting. This option is used in the initial solution [post](https://aws.amazon.com/blogs/networking-and-content-delivery/image-optimization-using-amazon-cloudfront-and-aws-lambda/)
 
+## Cost optimization
+You can optimize the cost of this solution according to your business needs by dialing up or down parameters like S3 object retention period or Lambda memory configuration, by changing S3 storage tier, by reconsidering the need for storing transformed images in S3, by using ARM based Lambda or AWS Lambda Managed Instances.
 
 ## Clean up resources
 
