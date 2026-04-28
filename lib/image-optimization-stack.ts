@@ -60,7 +60,7 @@ export class ImageOptimizationStack extends Stack {
     LAMBDA_TIMEOUT = this.node.tryGetContext('LAMBDA_TIMEOUT') || LAMBDA_TIMEOUT;
     MAX_IMAGE_SIZE = this.node.tryGetContext('MAX_IMAGE_SIZE') || MAX_IMAGE_SIZE;
     DEPLOY_SAMPLE_WEBSITE = this.node.tryGetContext('DEPLOY_SAMPLE_WEBSITE') || DEPLOY_SAMPLE_WEBSITE;
-    
+
 
     // deploy a sample website for testing if required
     if (DEPLOY_SAMPLE_WEBSITE === 'true') {
@@ -94,7 +94,7 @@ export class ImageOptimizationStack extends Stack {
     // For the bucket having original images, either use an external one, or create one with some samples photos.
     var originalImageBucket;
     var transformedImageBucket;
-    
+
     if (S3_IMAGE_BUCKET_NAME) {
       originalImageBucket = s3.Bucket.fromBucketName(this, 'imported-original-image-bucket', S3_IMAGE_BUCKET_NAME);
       new CfnOutput(this, 'OriginalImagesS3Bucket', {
@@ -133,7 +133,7 @@ export class ImageOptimizationStack extends Stack {
       });
     }
 
-    // prepare env variable for Lambda 
+    // prepare env variable for Lambda
     var lambdaEnv: LambdaEnv = {
       originalImageBucketName: originalImageBucket.bucketName,
       transformedImageCacheTTL: S3_TRANSFORMED_IMAGE_CACHE_TTL,
@@ -167,7 +167,7 @@ export class ImageOptimizationStack extends Stack {
     // Enable Lambda URL
     const imageProcessingURL = imageProcessing.addFunctionUrl();
 
-    // Leverage CDK Intrinsics to get the hostname of the Lambda URL 
+    // Leverage CDK Intrinsics to get the hostname of the Lambda URL
     const imageProcessingDomainName = Fn.parseDomainName(imageProcessingURL.url);
 
     // Create a CloudFront origin: S3 with fallback to Lambda when image needs to be transformed, otherwise with Lambda as sole origin
@@ -246,15 +246,53 @@ export class ImageOptimizationStack extends Stack {
       });
       imageDeliveryCacheBehaviorConfig.responseHeadersPolicy = imageResponseHeadersPolicy;
     }
+    // Video delivery: passthrough from S3 with caching + CORS, no Lambda/Sharp processing
+    var videoDeliveryCacheBehaviorConfig: any = {
+      origin: new origins.S3Origin(originalImageBucket, {
+        originShieldRegion: CLOUDFRONT_ORIGIN_SHIELD_REGION,
+      }),
+      viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+      compress: false,
+      cachePolicy: new cloudfront.CachePolicy(this, `VideoCachePolicy${this.node.addr}`, {
+        defaultTtl: Duration.days(30),
+        maxTtl: Duration.days(365),
+        minTtl: Duration.seconds(0),
+      }),
+    };
+
+    if (CLOUDFRONT_CORS_ENABLED === 'true') {
+      const videoResponseHeadersPolicy = new cloudfront.ResponseHeadersPolicy(this, `VideoResponsePolicy${this.node.addr}`, {
+        responseHeadersPolicyName: `VideoResponsePolicy${this.node.addr}`,
+        corsBehavior: {
+          accessControlAllowCredentials: false,
+          accessControlAllowHeaders: ['*'],
+          accessControlAllowMethods: ['GET'],
+          accessControlAllowOrigins: ['*'],
+          accessControlMaxAge: Duration.seconds(600),
+          originOverride: false,
+        },
+      });
+      videoDeliveryCacheBehaviorConfig.responseHeadersPolicy = videoResponseHeadersPolicy;
+    }
+
     const imageDelivery = new cloudfront.Distribution(this, 'imageDeliveryDistribution', {
       comment: 'image optimization - image delivery',
-      defaultBehavior: imageDeliveryCacheBehaviorConfig
+      defaultBehavior: {
+        origin: new origins.S3Origin(originalImageBucket)
+      },
+      additionalBehaviors: {
+        '*.jpg': imageDeliveryCacheBehaviorConfig,
+        '*.jpeg': imageDeliveryCacheBehaviorConfig,
+        '*.png': imageDeliveryCacheBehaviorConfig,
+        '*.gif': imageDeliveryCacheBehaviorConfig,
+        '*.mp4': videoDeliveryCacheBehaviorConfig,
+      },
     });
 
     // ADD OAC between CloudFront and LambdaURL
     const oac = new cloudfront.CfnOriginAccessControl(this, "OAC", {
       originAccessControlConfig: {
-        name: `oac${this.node.addr}`, 
+        name: `oac${this.node.addr}`,
         originAccessControlOriginType: "lambda",
         signingBehavior: "always",
         signingProtocol: "sigv4",
@@ -262,7 +300,7 @@ export class ImageOptimizationStack extends Stack {
     });
 
     const cfnImageDelivery = imageDelivery.node.defaultChild as CfnDistribution;
-    cfnImageDelivery.addPropertyOverride(`DistributionConfig.Origins.${(STORE_TRANSFORMED_IMAGES === 'true')?"1":"0"}.OriginAccessControlId`, oac.getAtt("Id"));
+    cfnImageDelivery.addPropertyOverride(`DistributionConfig.Origins.${(STORE_TRANSFORMED_IMAGES === 'true')?"2":"1"}.OriginAccessControlId`, oac.getAtt("Id"));
 
     imageProcessing.addPermission("AllowCloudFrontServicePrincipal1", {
       principal: new iam.ServicePrincipal("cloudfront.amazonaws.com"),

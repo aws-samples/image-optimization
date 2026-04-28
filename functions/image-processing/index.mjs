@@ -41,7 +41,7 @@ export const handler = async (event) => {
     let transformedImage = Sharp(await originalImageBody, { failOn: 'none', animated: true });
     // Get image orientation to rotate if needed
     const imageMetadata = await transformedImage.metadata();
-    // execute the requested operations 
+    // execute the requested operations
     const operationsJSON = Object.fromEntries(operationsPrefix.split(',').map(operation => operation.split('=')));
     // variable holding the server timing header value
     var timingLog = 'img-download;dur=' + parseInt(performance.now() - startTime);
@@ -57,19 +57,19 @@ export const handler = async (event) => {
         // check if formatting is requested
         if (operationsJSON['format']) {
             var isLossy = false;
+            let convertOptions = {}
             switch (operationsJSON['format']) {
                 case 'jpeg': contentType = 'image/jpeg'; isLossy = true; break;
                 case 'gif': contentType = 'image/gif'; break;
                 case 'webp': contentType = 'image/webp'; isLossy = true; break;
                 case 'png': contentType = 'image/png'; break;
-                case 'avif': contentType = 'image/avif'; isLossy = true; break;
+                case 'avif': contentType = 'image/avif'; isLossy = true; convertOptions.effort = 0; break;
                 default: contentType = 'image/jpeg'; isLossy = true;
             }
             if (operationsJSON['quality'] && isLossy) {
-                transformedImage = transformedImage.toFormat(operationsJSON['format'], {
-                    quality: parseInt(operationsJSON['quality']),
-                });
-            } else transformedImage = transformedImage.toFormat(operationsJSON['format']);
+                convertOptions.quality = parseInt(operationsJSON['quality']);
+            }
+            transformedImage = transformedImage.toFormat(operationsJSON['format'], convertOptions);
         } else {
             /// If not format is precised, Sharp converts svg to png by default https://github.com/aws-samples/image-optimization/issues/48
             if (contentType === 'image/svg+xml') contentType = 'image/png';
@@ -96,7 +96,7 @@ export const handler = async (event) => {
             })
             await s3Client.send(putImageCommand);
             timingLog = timingLog + ',img-upload;dur=' + parseInt(performance.now() - startTime);
-            // If the generated image file is too big, send a redirection to the generated image on S3, instead of serving it synchronously from Lambda. 
+            // If the generated image file is too big, send a redirection to the generated image on S3, instead of serving it synchronously from Lambda.
             if (imageTooBig) {
                 return {
                     statusCode: 302,
