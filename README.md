@@ -32,6 +32,30 @@ cdk deploy
 
 When the deployment is completed within minutes, the CDK output will include the domain name of the CloudFront distribution created for image optimization (ImageDeliveryDomain =YOURDISTRIBUTION.cloudfront.net). The stack will include an S3 bucket with sample images (OriginalImagesS3Bucket = YourS3BucketWithOriginalImagesGeneratedName). To verify that it is working properly, test the following optimized image URL https:// YOURDISTRIBUTION.cloudfront.net/images/rio/1.jpeg?format=auto&width=300.
 
+## Supported regions and the AWS European Sovereign Cloud
+
+This solution deploys in standard commercial AWS regions (partition `aws`) and, from the changes on the `esc` branch, in the AWS European Sovereign Cloud (ESC): partition `aws-eusc`, region `eusc-de-east-1`, URL suffix `amazonaws.eu`.
+
+The stack is partition aware. All ARNs are built from the stack partition, and the Origin Shield region selection recognizes `eusc-de-east-1`. The commercial-region behaviour is unchanged and remains the default.
+
+To deploy to ESC, use a CLI profile for the ESC account and set the region explicitly. Replace `<esc-profile>` with your profile name:
+
+```
+export AWS_REGION=eusc-de-east-1
+export CDK_DEFAULT_REGION=eusc-de-east-1
+cdk bootstrap --profile <esc-profile> aws://<esc-account-id>/eusc-de-east-1
+npm run build
+cdk deploy --profile <esc-profile>
+```
+
+The image delivery domain in the stack output ends in the ESC CloudFront domain suffix rather than `cloudfront.net`. Use that output value to build the test URL.
+
+Caveats for ESC:
+
+* ESC is a separate partition with a single region. Origin Shield is set to `eusc-de-east-1` (the region itself) because there is no separate regional edge cache to target.
+* This solution relies on CloudFront (including CloudFront Functions, Origin Access Control for a Lambda function URL origin, and origin failover), AWS Lambda function URLs with the `nodejs24.x` runtime, and Amazon S3. Confirm these services and features are available in `eusc-de-east-1` for your account before deploying to production.
+* The repository pins an older `aws-cdk` CLI devDependency than its `aws-cdk-lib`. If `cdk synth` or `cdk deploy` reports a cloud assembly schema mismatch, run the CDK commands with a CLI version compatible with the installed `aws-cdk-lib` (for example `npx aws-cdk@latest`).
+
 The stack can be deployed with the following parameters. 
 * **S3_IMAGE_BUCKET_NAME** Recommended for using an existing S3 bucket where your images are stored when deploying in production. Usage: cdk deploy -c S3_IMAGE_BUCKET_NAME=’YOUR_S3_BUCKET_NAME’. Without specifiying this parameter, the stack creates a new S3 bucket and sample images of Rio the dog ^^
 * **STORE_TRANSFORMED_IMAGES** Allows you to avoid temporary storage of transformed images, every image request is sent for transformation using Lambda upon cache miss in CloudFront.  Usage: cdk deploy -c STORE_TRANSFORMED_IMAGES=false. The default value of this parameter is true.
