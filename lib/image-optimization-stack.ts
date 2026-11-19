@@ -144,7 +144,8 @@ export class ImageOptimizationStack extends Stack {
     // IAM policy to read from the S3 bucket containing the original images
     const s3ReadOriginalImagesPolicy = new iam.PolicyStatement({
       actions: ['s3:GetObject'],
-      resources: ['arn:aws:s3:::' + originalImageBucket.bucketName + '/*'],
+      // arnForObjects builds a partition-aware ARN (aws, aws-eusc, ...).
+      resources: [originalImageBucket.arnForObjects('*')],
     });
 
     // statements of the IAM policy to attach to Lambda
@@ -187,7 +188,8 @@ export class ImageOptimizationStack extends Stack {
       // write policy for Lambda on the s3 bucket for transformed images
       var s3WriteTransformedImagesPolicy = new iam.PolicyStatement({
         actions: ['s3:PutObject'],
-        resources: ['arn:aws:s3:::' + transformedImageBucket.bucketName + '/*'],
+        // arnForObjects builds a partition-aware ARN (aws, aws-eusc, ...).
+        resources: [transformedImageBucket.arnForObjects('*')],
       });
       iamPolicyStatements.push(s3WriteTransformedImagesPolicy);
     } else {
@@ -267,7 +269,8 @@ export class ImageOptimizationStack extends Stack {
     imageProcessing.addPermission("AllowCloudFrontServicePrincipal1", {
       principal: new iam.ServicePrincipal("cloudfront.amazonaws.com"),
       action: "lambda:InvokeFunctionUrl",
-      sourceArn: `arn:aws:cloudfront::${this.account}:distribution/${imageDelivery.distributionId}`
+      // Partition-aware ARN so it resolves to aws-eusc in the ESC partition.
+      sourceArn: `arn:${this.partition}:cloudfront::${this.account}:distribution/${imageDelivery.distributionId}`
     })
 
     imageProcessing.addPermission("AllowCloudFrontServicePrincipal2", {
