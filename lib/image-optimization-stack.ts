@@ -252,6 +252,9 @@ export class ImageOptimizationStack extends Stack {
     const urlRewriteFunction = new cloudfront.Function(this, 'urlRewrite', {
       code: cloudfront.FunctionCode.fromFile({ filePath: 'functions/url-rewrite/index.js', }),
       functionName: `urlRewriteFunction${this.node.addr}`,
+      // ESC accepts only the cloudfront-js-2.0 runtime. Commercial regions keep
+      // the CDK default runtime.
+      runtime: useApiGatewayOrigin ? cloudfront.FunctionRuntime.JS_2_0 : undefined,
     });
 
     var imageDeliveryCacheBehaviorConfig: ImageDeliveryCacheBehaviorConfig = {
