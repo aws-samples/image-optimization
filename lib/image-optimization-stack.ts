@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT-0
 
-import { Fn, Stack, StackProps, RemovalPolicy, aws_s3 as s3, aws_s3_deployment as s3deploy, aws_cloudfront as cloudfront, aws_cloudfront_origins as origins, aws_lambda as lambda, aws_iam as iam, Duration, CfnOutput, aws_logs as logs } from 'aws-cdk-lib';
+import { Aws, Fn, Stack, StackProps, RemovalPolicy, aws_s3 as s3, aws_s3_deployment as s3deploy, aws_cloudfront as cloudfront, aws_cloudfront_origins as origins, aws_lambda as lambda, aws_iam as iam, aws_apigateway as apigateway, Duration, CfnOutput, aws_logs as logs } from 'aws-cdk-lib';
 import { CfnDistribution } from "aws-cdk-lib/aws-cloudfront";
 import { Construct } from 'constructs';
 import { getOriginShieldRegion } from './origin-shield';
@@ -165,11 +165,58 @@ export class ImageOptimizationStack extends Stack {
     };
     var imageProcessing = new lambda.Function(this, 'image-optimization', lambdaProps);
 
-    // Enable Lambda URL
-    const imageProcessingURL = imageProcessing.addFunctionUrl();
+    // Choose how CloudFront reaches the image-processing Lambda.
+    //
+    // Commercial regions (partition aws) keep the Lambda function URL origin with
+    // Origin Access Control, exactly as before. The AWS European Sovereign Cloud
+    // (partition aws-eusc) does not offer Lambda function URLs, so there the
+    // function is fronted by a regional API Gateway REST proxy instead. OAC does
+    // not apply to API Gateway, so the origin is protected by a secret custom
+    // origin header that the Lambda validates.
+    //
+    // This is auto-enabled when deploying to eusc-de-east-1, and can be forced in
+    // any region with `-c USE_API_GATEWAY_ORIGIN=true`. The default (commercial)
+    // behaviour is unchanged.
+    const deployRegion = process.env.AWS_REGION || process.env.CDK_DEFAULT_REGION || '';
+    const useApiGatewayOrigin = (this.node.tryGetContext('USE_API_GATEWAY_ORIGIN') === 'true') || (deployRegion === 'eusc-de-east-1');
 
-    // Leverage CDK Intrinsics to get the hostname of the Lambda URL 
-    const imageProcessingDomainName = Fn.parseDomainName(imageProcessingURL.url);
+    // The Lambda-backed CloudFront origin (fallback origin when S3 storage is on,
+    // sole origin otherwise).
+    var lambdaBackedOrigin: any;
+
+    if (useApiGatewayOrigin) {
+      // Deterministic per-stack shared secret. Stable across synths (no drift),
+      // known to both CloudFront (custom origin header) and the Lambda (env var).
+      const originSecret = createHash('sha256').update(`${this.stackName}:${this.node.addr}:image-optimization-origin`).digest('hex');
+      imageProcessing.addEnvironment('originSecret', originSecret);
+
+      const imageProcessingApi = new apigateway.LambdaRestApi(this, 'imageProcessingApi', {
+        handler: imageProcessing,
+        proxy: true,
+        // Treat every payload as binary so base64 image responses are decoded.
+        binaryMediaTypes: ['*/*'],
+        endpointConfiguration: { types: [apigateway.EndpointType.REGIONAL] },
+        deployOptions: { stageName: 'prod' },
+        cloudWatchRole: false,
+      });
+
+      // Partition-aware API Gateway regional domain (execute-api.<region>.<suffix>).
+      const apiDomainName = `${imageProcessingApi.restApiId}.execute-api.${Aws.REGION}.${Aws.URL_SUFFIX}`;
+
+      lambdaBackedOrigin = new origins.HttpOrigin(apiDomainName, {
+        originShieldRegion: CLOUDFRONT_ORIGIN_SHIELD_REGION,
+        originPath: `/${imageProcessingApi.deploymentStage.stageName}`,
+        customHeaders: { 'x-origin-secret': originSecret },
+      });
+    } else {
+      // Enable Lambda URL
+      const imageProcessingURL = imageProcessing.addFunctionUrl();
+      // Leverage CDK Intrinsics to get the hostname of the Lambda URL
+      const imageProcessingDomainName = Fn.parseDomainName(imageProcessingURL.url);
+      lambdaBackedOrigin = new origins.HttpOrigin(imageProcessingDomainName, {
+        originShieldRegion: CLOUDFRONT_ORIGIN_SHIELD_REGION,
+      });
+    }
 
     // Create a CloudFront origin: S3 with fallback to Lambda when image needs to be transformed, otherwise with Lambda as sole origin
     var imageOrigin;
@@ -179,9 +226,7 @@ export class ImageOptimizationStack extends Stack {
         primaryOrigin: origins.S3BucketOrigin.withOriginAccessControl(transformedImageBucket, {
           originShieldRegion: CLOUDFRONT_ORIGIN_SHIELD_REGION,
         }),
-        fallbackOrigin: new origins.HttpOrigin(imageProcessingDomainName, {
-          originShieldRegion: CLOUDFRONT_ORIGIN_SHIELD_REGION,
-        }),
+        fallbackOrigin: lambdaBackedOrigin,
         fallbackStatusCodes: [403, 500, 503, 504],
       });
 
@@ -193,9 +238,7 @@ export class ImageOptimizationStack extends Stack {
       });
       iamPolicyStatements.push(s3WriteTransformedImagesPolicy);
     } else {
-      imageOrigin = new origins.HttpOrigin(imageProcessingDomainName, {
-        originShieldRegion: CLOUDFRONT_ORIGIN_SHIELD_REGION,
-      });
+      imageOrigin = lambdaBackedOrigin;
     }
 
     // attach iam policy to the role assumed by Lambda
@@ -253,31 +296,35 @@ export class ImageOptimizationStack extends Stack {
       defaultBehavior: imageDeliveryCacheBehaviorConfig
     });
 
-    // ADD OAC between CloudFront and LambdaURL
-    const oac = new cloudfront.CfnOriginAccessControl(this, "OAC", {
-      originAccessControlConfig: {
-        name: `oac${this.node.addr}`, 
-        originAccessControlOriginType: "lambda",
-        signingBehavior: "always",
-        signingProtocol: "sigv4",
-      },
-    });
+    // ADD OAC between CloudFront and the Lambda function URL (commercial regions
+    // only). The API Gateway origin used in ESC is protected by the secret
+    // origin header instead, since OAC does not apply to API Gateway.
+    if (!useApiGatewayOrigin) {
+      const oac = new cloudfront.CfnOriginAccessControl(this, "OAC", {
+        originAccessControlConfig: {
+          name: `oac${this.node.addr}`,
+          originAccessControlOriginType: "lambda",
+          signingBehavior: "always",
+          signingProtocol: "sigv4",
+        },
+      });
 
-    const cfnImageDelivery = imageDelivery.node.defaultChild as CfnDistribution;
-    cfnImageDelivery.addPropertyOverride(`DistributionConfig.Origins.${(STORE_TRANSFORMED_IMAGES === 'true')?"1":"0"}.OriginAccessControlId`, oac.getAtt("Id"));
+      const cfnImageDelivery = imageDelivery.node.defaultChild as CfnDistribution;
+      cfnImageDelivery.addPropertyOverride(`DistributionConfig.Origins.${(STORE_TRANSFORMED_IMAGES === 'true')?"1":"0"}.OriginAccessControlId`, oac.getAtt("Id"));
 
-    imageProcessing.addPermission("AllowCloudFrontServicePrincipal1", {
-      principal: new iam.ServicePrincipal("cloudfront.amazonaws.com"),
-      action: "lambda:InvokeFunctionUrl",
-      // Partition-aware ARN so it resolves to aws-eusc in the ESC partition.
-      sourceArn: `arn:${this.partition}:cloudfront::${this.account}:distribution/${imageDelivery.distributionId}`
-    })
+      imageProcessing.addPermission("AllowCloudFrontServicePrincipal1", {
+        principal: new iam.ServicePrincipal("cloudfront.amazonaws.com"),
+        action: "lambda:InvokeFunctionUrl",
+        // Partition-aware ARN so it resolves to aws-eusc in the ESC partition.
+        sourceArn: `arn:${this.partition}:cloudfront::${this.account}:distribution/${imageDelivery.distributionId}`
+      })
 
-    imageProcessing.addPermission("AllowCloudFrontServicePrincipal2", {
-      principal: new iam.ServicePrincipal("cloudfront.amazonaws.com"),
-      action: "lambda:InvokeFunction",
-      invokedViaFunctionUrl: true
-    })
+      imageProcessing.addPermission("AllowCloudFrontServicePrincipal2", {
+        principal: new iam.ServicePrincipal("cloudfront.amazonaws.com"),
+        action: "lambda:InvokeFunction",
+        invokedViaFunctionUrl: true
+      })
+    }
 
     new CfnOutput(this, 'ImageDeliveryDomain', {
       description: 'Domain name of image delivery',
