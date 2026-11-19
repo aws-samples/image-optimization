@@ -53,7 +53,10 @@ The image delivery domain in the stack output ends in the ESC CloudFront domain 
 Caveats for ESC:
 
 * ESC is a separate partition with a single region. Origin Shield is set to `eusc-de-east-1` (the region itself) because there is no separate regional edge cache to target.
-* This solution relies on CloudFront (including CloudFront Functions, Origin Access Control for a Lambda function URL origin, and origin failover), AWS Lambda function URLs with the `nodejs24.x` runtime, and Amazon S3. Confirm these services and features are available in `eusc-de-east-1` for your account before deploying to production.
+* Lambda function URLs are not available in `eusc-de-east-1`. When deploying there (auto-detected, or forced with `-c USE_API_GATEWAY_ORIGIN=true`), the image-processing Lambda is fronted by a regional Amazon API Gateway REST proxy instead of a function URL, and that origin becomes the CloudFront failover origin. Commercial regions keep the function URL plus Origin Access Control origin and are unaffected.
+* Origin Access Control does not apply to API Gateway, so the API Gateway origin is protected by a secret custom origin header (`x-origin-secret`) that CloudFront sends and the Lambda validates. The secret is derived deterministically per stack. The S3 transformed-image bucket origin still uses Origin Access Control.
+* The API Gateway REST API enables binary media types (`*/*`) so image bytes are returned correctly.
+* This solution relies on CloudFront (including CloudFront Functions, origin failover, and Origin Access Control for the S3 origin), AWS Lambda with the `nodejs24.x` runtime, Amazon API Gateway (regional REST endpoint), and Amazon S3. Confirm these services and features are available in `eusc-de-east-1` for your account before deploying to production.
 * The repository pins an older `aws-cdk` CLI devDependency than its `aws-cdk-lib`. If `cdk synth` or `cdk deploy` reports a cloud assembly schema mismatch, run the CDK commands with a CLI version compatible with the installed `aws-cdk-lib` (for example `npx aws-cdk@latest`).
 
 The stack can be deployed with the following parameters. 
