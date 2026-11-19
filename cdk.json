@@ -28,7 +28,8 @@
     "@aws-cdk/aws-iam:minimizePolicies": true,
     "@aws-cdk/core:target-partitions": [
       "aws",
-      "aws-cn"
+      "aws-cn",
+      "aws-eusc"
     ]
   }
 }
