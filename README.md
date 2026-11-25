@@ -57,7 +57,6 @@ Caveats for ESC:
 * Origin Access Control does not apply to API Gateway, so the API Gateway origin is protected by a secret custom origin header (`x-origin-secret`) that CloudFront sends and the Lambda validates. The secret is derived deterministically per stack. The S3 transformed-image bucket origin still uses Origin Access Control.
 * The API Gateway REST API enables binary media types (`*/*`) so image bytes are returned correctly.
 * This solution relies on CloudFront (including CloudFront Functions, origin failover, and Origin Access Control for the S3 origin), AWS Lambda with the `nodejs24.x` runtime, Amazon API Gateway (regional REST endpoint), and Amazon S3. Confirm these services and features are available in `eusc-de-east-1` for your account before deploying to production.
-* The repository pins an older `aws-cdk` CLI devDependency than its `aws-cdk-lib`. If `cdk synth` or `cdk deploy` reports a cloud assembly schema mismatch, run the CDK commands with a CLI version compatible with the installed `aws-cdk-lib` (for example `npx aws-cdk@latest`).
 
 The stack can be deployed with the following parameters. 
 * **S3_IMAGE_BUCKET_NAME** Recommended for using an existing S3 bucket where your images are stored when deploying in production. Usage: cdk deploy -c S3_IMAGE_BUCKET_NAME=’YOUR_S3_BUCKET_NAME’. Without specifiying this parameter, the stack creates a new S3 bucket and sample images of Rio the dog ^^
