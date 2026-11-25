@@ -32,6 +32,13 @@ const OTHER_REGIONS = {
   ME_SOUTH_1: "me-south-1",           // 20. Middle East (Bahrain)
 };
 
+// AWS European Sovereign Cloud (partition aws-eusc). Single region that hosts
+// its own CloudFront control plane, so Origin Shield there targets the region
+// itself.
+const EUSC_REGIONS = {
+  EUSC_DE_EAST_1: "eusc-de-east-1",   // AWS European Sovereign Cloud (Germany)
+};
+
 // Region to Origin Shield mappings based on latency.
 // To be updated when new Regions are available or new RECs are added to CloudFront.
 const REGION_TO_ORIGIN_SHIELD_MAPPINGS = new Map([
@@ -56,11 +63,14 @@ const REGION_TO_ORIGIN_SHIELD_MAPPINGS = new Map([
   [OTHER_REGIONS.EU_WEST_3, REC_REGIONS.EU_WEST_2],           // 18.
   [OTHER_REGIONS.EU_NORTH_1, REC_REGIONS.EU_WEST_2],          // 19.
   [OTHER_REGIONS.ME_SOUTH_1, REC_REGIONS.AP_SOUTH_1],         // 20.
+
+  // AWS European Sovereign Cloud: single region, shields to itself.
+  [EUSC_REGIONS.EUSC_DE_EAST_1, EUSC_REGIONS.EUSC_DE_EAST_1],
 ]);
 
 export const getOriginShieldRegion = (region: string) => {
   const originShieldRegion = REGION_TO_ORIGIN_SHIELD_MAPPINGS.get(region);
-  if (originShieldRegion === undefined) throw new Error(`The specified region ${region} is not supported.`);
+  if (originShieldRegion === undefined) throw new Error(`The specified region ${region} is not a supported Origin Shield region.`);
 
   return originShieldRegion;
 }

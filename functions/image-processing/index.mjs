@@ -9,12 +9,31 @@ const S3_ORIGINAL_IMAGE_BUCKET = process.env.originalImageBucketName;
 const S3_TRANSFORMED_IMAGE_BUCKET = process.env.transformedImageBucketName;
 const TRANSFORMED_IMAGE_CACHE_TTL = process.env.transformedImageCacheTTL;
 const MAX_IMAGE_SIZE = parseInt(process.env.maxImageSize);
+// Set only on the API Gateway path (ESC). When present, requests must carry a
+// matching x-origin-secret header, which CloudFront adds as a custom origin
+// header. The Lambda function URL path (commercial) leaves this unset.
+const ORIGIN_SECRET = process.env.originSecret;
 
 export const handler = async (event) => {
+    // Support both event shapes: Lambda function URL / API Gateway HTTP API
+    // payload v2 (requestContext.http.*) and API Gateway REST proxy payload v1
+    // (httpMethod / path).
+    const httpMethod = event.requestContext?.http?.method ?? event.httpMethod;
+    const requestPath = event.requestContext?.http?.path ?? event.path;
+
+    // Normalize headers to lower-case keys for a case-insensitive lookup.
+    const normalizedHeaders = {};
+    for (const key in (event.headers || {})) normalizedHeaders[key.toLowerCase()] = event.headers[key];
+
+    // Validate the secret origin header when configured (API Gateway origin).
+    if (ORIGIN_SECRET && normalizedHeaders['x-origin-secret'] !== ORIGIN_SECRET) {
+        return sendError(403, 'Forbidden', 'Missing or invalid origin secret');
+    }
+
     // Validate if this is a GET request
-    if (!event.requestContext || !event.requestContext.http || !(event.requestContext.http.method === 'GET')) return sendError(400, 'Only GET method is supported', event);
+    if (httpMethod !== 'GET') return sendError(400, 'Only GET method is supported', event);
     // An example of expected path is /images/rio/1.jpeg/format=auto,width=100 or /images/rio/1.jpeg/original where /images/rio/1.jpeg is the path of the original image
-    var imagePathArray = event.requestContext.http.path.split('/');
+    var imagePathArray = requestPath.split('/');
     // get the requested image operations
     var operationsPrefix = imagePathArray.pop();
     // get the original image path images/rio/1.jpg
