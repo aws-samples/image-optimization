@@ -34,7 +34,7 @@ When the deployment is completed within minutes, the CDK output will include the
 
 ## Supported regions and the AWS European Sovereign Cloud
 
-This solution deploys in standard commercial AWS regions (partition `aws`) and, from the changes on the `esc` branch, in the AWS European Sovereign Cloud (ESC): partition `aws-eusc`, region `eusc-de-east-1`, URL suffix `amazonaws.eu`.
+This solution deploys in standard commercial AWS regions (partition `aws`) and in the AWS European Sovereign Cloud (ESC): partition `aws-eusc`, region `eusc-de-east-1`.
 
 The stack is partition aware. All ARNs are built from the stack partition, and the Origin Shield region selection recognizes `eusc-de-east-1`. The commercial-region behaviour is unchanged and remains the default.
 
